@@ -2,6 +2,18 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faArrowLeft,
+  faUser,
+  faPhone,
+  faMapMarkerAlt,
+  faStickyNote,
+  faShoppingBag,
+  faCreditCard,
+  faExclamationCircle,
+  faCheckCircle
+} from '@fortawesome/free-solid-svg-icons';
 
 function Checkout() {
   const [cart, setCart] = useState({ items: [] });
@@ -19,7 +31,7 @@ function Checkout() {
 
   // Lấy giỏ hàng từ API
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) {
       setError('Vui lòng đăng nhập để thanh toán');
       toast.error('Vui lòng đăng nhập để thanh toán');
@@ -52,12 +64,12 @@ function Checkout() {
           errorMessage = err.response.data.message;
           if (err.response.data.message.includes('userId không hợp lệ')) {
             errorMessage = 'Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại!';
-            localStorage.removeItem('token');
+            sessionStorage.removeItem('token');
             navigate('/sign-in');
           }
         } else if (err.response?.status === 401) {
           errorMessage = 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!';
-          localStorage.removeItem('token');
+          sessionStorage.removeItem('token');
           navigate('/sign-in');
         } else if (err.response?.status === 400) {
           errorMessage = 'Dữ liệu giỏ hàng không hợp lệ. Vui lòng kiểm tra lại!';
@@ -127,7 +139,7 @@ function Checkout() {
     }
 
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const orderData = {
         items: cart.items.map(item => ({
           productId: item.productId,
@@ -187,7 +199,7 @@ function Checkout() {
         errorMessage = err.response.data.message;
       } else if (err.response?.status === 401) {
         errorMessage = 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!';
-        localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
         navigate('/sign-in');
       } else if (err.response?.status === 400) {
         errorMessage = err.response.data.message || 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại!';
@@ -209,133 +221,202 @@ function Checkout() {
 
   if (!isAuthenticated) {
     return (
-      <div className="max-w-4xl mx-auto mt-8 p-6 border border-gray-300 rounded-lg shadow-md">
-        <div className="text-red-500 text-center">{error}</div>
+      <div className="min-h-screen bg-gray-50 pt-20 pb-12">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="flex items-center justify-center text-red-500 mb-4">
+              <FontAwesomeIcon icon={faExclamationCircle} className="text-4xl" />
+            </div>
+            <div className="text-red-500 text-center">{error}</div>
+          </div>
+        </div>
       </div>
     );
   }
 
+  const totalAmount = cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
   return (
-    <div className="max-w-4xl mx-auto mt-8 p-6 border border-gray-300 rounded-lg shadow-md">
-      <h1 className="text-3xl font-semibold text-center text-blue-600 mb-6">Thanh toán</h1>
-      {error && <div className="text-red-500 text-center mb-4">{error}</div>}
-      {cart.items.length === 0 ? (
-        <div className="text-center text-gray-600">Giỏ hàng trống. Vui lòng thêm sản phẩm để thanh toán.</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Form nhập thông tin giao hàng (bên trái) */}
-          <div className="md:col-span-1">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Thông tin giao hàng</h2>
-            <form onSubmit={handleSubmit} noValidate>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="fullName" className="block text-lg mb-2">Họ tên</label>
-                  <input
-                    type="text"
-                    id="fullName"
-                    name="fullName"
-                    value={formData.fullName}
-                    onChange={handleInputChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Nhập họ tên"
-                    required
-                  />
-                  {formErrors.fullName && (
-                    <p className="text-red-500 text-sm mt-1">{formErrors.fullName}</p>
-                  )}
-                </div>
-                <div>
-                  <label htmlFor="phone" className="block text-lg mb-2">Số điện thoại</label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Nhập số điện thoại (10 chữ số)"
-                    required
-                  />
-                  {formErrors.phone && (
-                    <p className="text-red-500 text-sm mt-1">{formErrors.phone}</p>
-                  )}
-                </div>
-                <div>
-                  <label htmlFor="address" className="block text-lg mb-2">Địa chỉ</label>
-                  <textarea
-                    id="address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    rows="3"
-                    placeholder="Nhập địa chỉ giao hàng"
-                    required
-                  />
-                  {formErrors.address && (
-                    <p className="text-red-500 text-sm mt-1">{formErrors.address}</p>
-                  )}
-                </div>
-                <div>
-                  <label htmlFor="note" className="block text-lg mb-2">Ghi chú (tùy chọn)</label>
-                  <textarea
-                    id="note"
-                    name="note"
-                    value={formData.note}
-                    onChange={handleInputChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    rows="3"
-                    placeholder="Nhập ghi chú (nếu có)"
-                  />
-                </div>
+    <div className="min-h-screen bg-gray-50 pt-20 pb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <button
+                onClick={handleBack}
+                className="text-blue-600 hover:text-blue-700 flex items-center"
+              >
+                <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
+                Quay lại giỏ hàng
+              </button>
+              <h1 className="text-3xl font-bold text-gray-900">Thanh toán</h1>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-6">
+                {error}
               </div>
-              <div className="text-center mt-6">
+            )}
+
+            {cart.items.length === 0 ? (
+              <div className="text-center py-12">
+                <FontAwesomeIcon icon={faShoppingBag} className="text-6xl text-gray-400 mb-4" />
+                <h2 className="text-2xl font-semibold text-gray-600 mb-2">Giỏ hàng trống</h2>
+                <p className="text-gray-500 mb-6">Vui lòng thêm sản phẩm vào giỏ hàng để thanh toán</p>
                 <button
-                  type="submit"
-                  className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition duration-300"
+                  onClick={handleBack}
+                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition duration-300"
                 >
-                  Xác nhận thanh toán
+                  Quay lại giỏ hàng
                 </button>
               </div>
-            </form>
-          </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Form thông tin giao hàng */}
+                <div className="space-y-6">
+                  <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h2 className="text-xl font-semibold text-gray-900 mb-6">Thông tin giao hàng</h2>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                      <div>
+                        <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
+                          <FontAwesomeIcon icon={faUser} className="mr-2 text-blue-600" />
+                          Họ tên
+                        </label>
+                        <input
+                          type="text"
+                          id="fullName"
+                          name="fullName"
+                          value={formData.fullName}
+                          onChange={handleInputChange}
+                          className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            formErrors.fullName ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                          placeholder="Nhập họ tên của bạn"
+                        />
+                        {formErrors.fullName && (
+                          <p className="mt-1 text-sm text-red-600">{formErrors.fullName}</p>
+                        )}
+                      </div>
 
-          {/* Thông tin đơn hàng (bên phải) */}
-          <div className="md:col-span-1">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Thông tin đơn hàng</h2>
-            <div className="space-y-4">
-              {cart.items.map((item) => (
-                <div key={item.productId} className="flex gap-4 border-b pb-4">
-                  <img
-                    src={item.image}
-                    alt={item.productName}
-                    className="w-24 h-24 object-cover rounded-md"
-                    onError={(e) => {
-                      e.target.src = 'https://via.placeholder.com/150';
-                    }}
-                  />
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-gray-800">{item.productName}</h3>
-                    <p className="text-gray-600">Giá: {item.price.toLocaleString()} VND</p>
-                    <p className="text-gray-600">Số lượng: {item.quantity}</p>
-                    <p className="text-gray-600">Tổng: {(item.price * item.quantity).toLocaleString()} VND</p>
+                      <div>
+                        <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                          <FontAwesomeIcon icon={faPhone} className="mr-2 text-blue-600" />
+                          Số điện thoại
+                        </label>
+                        <input
+                          type="tel"
+                          id="phone"
+                          name="phone"
+                          value={formData.phone}
+                          onChange={handleInputChange}
+                          className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            formErrors.phone ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                          placeholder="Nhập số điện thoại"
+                        />
+                        {formErrors.phone && (
+                          <p className="mt-1 text-sm text-red-600">{formErrors.phone}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
+                          <FontAwesomeIcon icon={faMapMarkerAlt} className="mr-2 text-blue-600" />
+                          Địa chỉ
+                        </label>
+                        <input
+                          type="text"
+                          id="address"
+                          name="address"
+                          value={formData.address}
+                          onChange={handleInputChange}
+                          className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            formErrors.address ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                          placeholder="Nhập địa chỉ giao hàng"
+                        />
+                        {formErrors.address && (
+                          <p className="mt-1 text-sm text-red-600">{formErrors.address}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label htmlFor="note" className="block text-sm font-medium text-gray-700 mb-1">
+                          <FontAwesomeIcon icon={faStickyNote} className="mr-2 text-blue-600" />
+                          Ghi chú
+                        </label>
+                        <textarea
+                          id="note"
+                          name="note"
+                          value={formData.note}
+                          onChange={handleInputChange}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Nhập ghi chú (không bắt buộc)"
+                          rows="3"
+                        />
+                      </div>
+                    </form>
                   </div>
                 </div>
-              ))}
-              <div className="text-xl font-semibold text-gray-800 mt-4">
-                Tổng cộng: {cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0).toLocaleString()} VND
+
+                {/* Thông tin đơn hàng */}
+                <div className="space-y-6">
+                  <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h2 className="text-xl font-semibold text-gray-900 mb-6">Thông tin đơn hàng</h2>
+                    <div className="space-y-4">
+                      {cart.items.map((item) => (
+                        <div key={item.productId} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                          <div className="w-20 h-20 flex-shrink-0">
+                            <img
+                              src={item.image}
+                              alt={item.productName}
+                              className="w-full h-full object-cover rounded-lg"
+                              onError={(e) => {
+                                e.target.src = 'https://via.placeholder.com/150';
+                              }}
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-medium text-gray-900">{item.productName}</h3>
+                            <div className="text-sm text-gray-500">
+                              {item.price.toLocaleString()} VND x {item.quantity}
+                            </div>
+                          </div>
+                          <div className="font-semibold text-gray-900">
+                            {(item.price * item.quantity).toLocaleString()} VND
+                          </div>
+                        </div>
+                      ))}
+
+                      <div className="border-t border-gray-200 pt-4 mt-4">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-gray-600">Tạm tính:</span>
+                          <span className="text-gray-900">{totalAmount.toLocaleString()} VND</span>
+                        </div>
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-gray-600">Phí vận chuyển:</span>
+                          <span className="text-gray-900">Miễn phí</span>
+                        </div>
+                        <div className="flex justify-between items-center text-lg font-semibold mt-4 pt-4 border-t border-gray-200">
+                          <span className="text-gray-900">Tổng cộng:</span>
+                          <span className="text-blue-600">{totalAmount.toLocaleString()} VND</span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={handleSubmit}
+                        className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition duration-300 flex items-center justify-center mt-6"
+                      >
+                        <FontAwesomeIcon icon={faCreditCard} className="mr-2" />
+                        Thanh toán khi nhận hàng
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
-      )}
-      <div className="text-center mt-6">
-        <button
-          onClick={handleBack}
-          className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-300"
-        >
-          Quay lại giỏ hàng
-        </button>
       </div>
     </div>
   );

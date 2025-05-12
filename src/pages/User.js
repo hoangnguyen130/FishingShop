@@ -1,41 +1,313 @@
-import LeftBar from '~/components/Layout/DefaultLayout/Header';
-
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { toast } from 'react-toastify';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCamera, faSave, faUser, faEnvelope, faPhone, faMapMarkerAlt, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { useNavigate } from 'react-router-dom';
 import avt from '~/assets/imgs/default-avatar.webp';
 
 function UserPage() {
+  const navigate = useNavigate();
+  const [userInfo, setUserInfo] = useState({
+    userName: '',
+    email: '',
+    phone: '',
+    address: '',
+    avatar: avt
+  });
+  const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetchUserInfo();
+  }, []);
+
+  const fetchUserInfo = async () => {
+    try {
+      const token = sessionStorage.getItem('token');
+      if (!token) {
+        toast.error('Vui lòng đăng nhập để xem thông tin!');
+        navigate('/sign-in');
+        return;
+      }
+
+      // Get userId from token
+      const tokenData = JSON.parse(atob(token.split('.')[1]));
+      const userId = tokenData.userId;
+
+      const response = await axios.get('http://localhost:3001/v1/auth/profile', {
+        params: { userId },
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.data.user) {
+        setUserInfo({
+          userName: response.data.user.userName || '',
+          email: response.data.user.email || '',
+          phone: response.data.user.phone || '',
+          address: response.data.user.address || '',
+          avatar: response.data.user.avatar || avt
+        });
+      }
+    } catch (error) {
+      if (error.response?.status === 401) {
+        toast.error('Phiên đăng nhập đã hết hạn!');
+        navigate('/sign-in');
+      } else {
+        toast.error('Không thể tải thông tin người dùng!');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setUserInfo(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast.error('Kích thước file không được vượt quá 5MB!');
+        return;
+      }
+      setSelectedFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    e.stopPropagation(); // Prevent event bubbling
+
+    // Prevent double submission
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      const token = sessionStorage.getItem('token');
+      if (!token) {
+        toast.error('Vui lòng đăng nhập để cập nhật thông tin!');
+        navigate('/sign-in');
+        return;
+      }
+
+      // Get userId from token
+      const tokenData = JSON.parse(atob(token.split('.')[1]));
+      const userId = tokenData.userId;
+
+      const formData = new FormData();
+      formData.append('userName', userInfo.userName.trim());
+      formData.append('email', userInfo.email.trim());
+      if (userInfo.phone) formData.append('phone', userInfo.phone.trim());
+      if (userInfo.address) formData.append('address', userInfo.address.trim());
+      if (selectedFile) {
+        formData.append('avatar', selectedFile);
+      }
+
+
+      const response = await axios.put('http://localhost:3001/v1/auth/profile/update', formData, {
+        params: { userId },
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      console.log('Update response:', response.data);
+
+      // Check if response has data
+      if (response.data) {
+        toast.success('Cập nhật thông tin thành công!');
+        setIsEditing(false);
+        setSelectedFile(null);
+        setPreviewUrl(null);
+        
+        // Update local state with new user info
+        if (response.data.user) {
+          setUserInfo(prev => ({
+            ...prev,
+            ...response.data.user
+          }));
+        }
+      } else {
+        throw new Error('Không nhận được dữ liệu từ server');
+      }
+    } catch (error) {
+      console.error('Update error:', error.response?.data || error.message);
+      if (error.response?.status === 401) {
+        toast.error('Phiên đăng nhập đã hết hạn!');
+        navigate('/sign-in');
+      } else if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error('Không thể cập nhật thông tin!');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="user-page min-h-screen bg-black">
-      <LeftBar />
-      <div className="max-w-screen min-h-screen mx-64 px-40 bg-black text-white pt-8">
-        <div
-          className="user-info-wrapper flex w-full relative pb-6
-            before:content-[''] before:absolute before:w-full before:h-px before:top-auto before:bottom-0 before:right-0 before:bg-slate-300  before:opacity-20"
+    <div className="min-h-screen bg-gray-100 pt-20">
+      <div className="max-w-4xl mx-auto p-6">
+        {/* Back to Home Button */}
+        <button
+          onClick={() => navigate('/')}
+          className="mb-4 flex items-center text-blue-600 hover:text-blue-700 transition-colors"
         >
-          <div className="img-wrapper mr-8 px-4">
-            <img src={avt} alt="avt" className="w-36 h-36 rounded-full" />
+          <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
+          <span>Quay về trang chủ</span>
+        </button>
+
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          {/* Header Section */}
+          <div className="bg-blue-600 px-6 py-8">
+            <div className="flex items-center space-x-6">
+              <div className="relative">
+                <img
+                  src={previewUrl || userInfo.avatar}
+                  alt="Avatar"
+                  className="w-32 h-32 rounded-full border-4 border-white object-cover"
+                />
+                {isEditing && (
+                  <label className="absolute bottom-0 right-0 bg-white text-blue-600 p-2 rounded-full cursor-pointer hover:bg-gray-100 shadow-lg">
+                    <FontAwesomeIcon icon={faCamera} />
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      onChange={handleFileChange}
+                    />
+                  </label>
+                )}
+              </div>
+              <div className="flex-1">
+                <h1 className="text-2xl font-bold text-white mb-2">{userInfo.userName}</h1>
+                <p className="text-blue-100">{userInfo.email}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setIsEditing(!isEditing);
+                  if (!isEditing) {
+                    setSelectedFile(null);
+                    setPreviewUrl(null);
+                  }
+                }}
+                className="px-4 py-2 bg-white text-blue-600 rounded-md hover:bg-gray-100 transition-colors"
+              >
+                {isEditing ? 'Hủy' : 'Chỉnh sửa'}
+              </button>
+            </div>
           </div>
-          <div className="user-info ">
-            <div className="flex mb-2">
-              <h2 className="user-name mr-8">User Name</h2>
-              <button className="follow-btn mr-3 bg-neutral-600 py-1 px-4 rounded-md">Theo dõi</button>
-              <button className="texting-btn bg-neutral-600 py-1 px-4 rounded-md">Nhắn tin</button>
+
+          {/* Form Section */}
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Username Field */}
+              <div className="space-y-2">
+                <label className="flex items-center text-sm font-medium text-gray-700">
+                  <FontAwesomeIcon icon={faUser} className="w-4 h-4 mr-2 text-blue-600" />
+                  Tên người dùng
+                </label>
+                <input
+                  type="text"
+                  name="userName"
+                  value={userInfo.userName}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                  placeholder="Nhập tên người dùng"
+                  required
+                />
+              </div>
+
+              {/* Email Field */}
+              <div className="space-y-2">
+                <label className="flex items-center text-sm font-medium text-gray-700">
+                  <FontAwesomeIcon icon={faEnvelope} className="w-4 h-4 mr-2 text-blue-600" />
+                  Email
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={userInfo.email}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                  placeholder="Nhập email"
+                  required
+                />
+              </div>
+
+              {/* Phone Field */}
+              <div className="space-y-2">
+                <label className="flex items-center text-sm font-medium text-gray-700">
+                  <FontAwesomeIcon icon={faPhone} className="w-4 h-4 mr-2 text-blue-600" />
+                  Số điện thoại
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={userInfo.phone}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                  placeholder="Nhập số điện thoại"
+                />
+              </div>
+
+              {/* Address Field */}
+              <div className="space-y-2">
+                <label className="flex items-center text-sm font-medium text-gray-700">
+                  <FontAwesomeIcon icon={faMapMarkerAlt} className="w-4 h-4 mr-2 text-blue-600" />
+                  Địa chỉ
+                </label>
+                <input
+                  type="text"
+                  name="address"
+                  value={userInfo.address}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                  placeholder="Nhập địa chỉ"
+                />
+              </div>
             </div>
-            <div className="flex">
-              <p className="mr-6">0 bài viết</p>
-              <p className="mr-6">0 người theo dõi</p>
-              <p className="">Đang theo dõi 0 người</p>
-            </div>
-          </div>
-        </div>
-        <div className='mt-2'>
-            <p className='my-1'>Bài viết</p>
-            <div className=''>
-                <img src={avt} alt='avt' className='float-left w-1/3 pr-1.5 pb-4'/>
-                <img src={avt} alt='avt' className='float-left w-1/3 pr-1.5 pb-4'/>
-                <img src={avt} alt='avt' className='float-left w-1/3 pr-1.5 pb-4'/>
-                <img src={avt} alt='avt' className='float-left w-1/3 pr-1.5 pb-4'/>
-                <img src={avt} alt='avt' className='float-left w-1/3 pr-1.5 pb-4'/>
-            </div>
+
+            {/* Submit Button */}
+            {isEditing && (
+              <div className="flex justify-end pt-4 border-t">
+                <button
+                  type="submit"
+                  className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  <FontAwesomeIcon icon={faSave} className="mr-2" />
+                  Lưu thay đổi
+                </button>
+              </div>
+            )}
+          </form>
         </div>
       </div>
     </div>

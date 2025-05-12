@@ -1,21 +1,78 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Search from '../../Search/Search';
 import axios from 'axios';
-import SignOut from '../../SignOut';
 import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faShoppingCart } from '@fortawesome/free-solid-svg-icons';
+import { 
+  faShoppingCart, 
+  faUser, 
+  faSignOutAlt, 
+  faHome,
+  faFish,
+  faTools,
+  faBox,
+  faUserEdit,
+  faClipboardList,
+  faTimes,
+  faSignInAlt,
+  faUserPlus,
+  faBars,
+  faChartLine,
+  faStore,
+  faUsers,
+  faPlus
+} from '@fortawesome/free-solid-svg-icons';
+import defaultAvatar from '~/assets/imgs/default-avatar.webp';
+
+// Logout Confirmation Modal Component
+const LogoutConfirmation = ({ isOpen, onClose, onConfirm }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+      <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Xác nhận đăng xuất</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <FontAwesomeIcon icon={faTimes} />
+          </button>
+        </div>
+        <p className="text-gray-600 mb-6">Bạn có chắc chắn muốn đăng xuất không?</p>
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+          >
+            Hủy
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+          >
+            Đăng xuất
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 function Header() {
   const [showbg, setShowbg] = useState(true);
   const [cartCount, setCartCount] = useState(0);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isSignOutOpen, setIsSignOutOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // Lấy số lượng sản phẩm trong giỏ hàng từ API
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) {
       setCartCount(0);
       return;
@@ -55,99 +112,172 @@ function Header() {
     };
   }, []);
 
-  const handleOpenSignOut = () => {
-    setIsSignOutOpen(true);
-  };
-
-  const handleCloseSignOut = () => {
-    setIsSignOutOpen(false);
+  const handleUserMenuClick = () => {
+    setIsUserMenuOpen(!isUserMenuOpen);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('email');
-    localStorage.removeItem('userName');
-    sessionStorage.removeItem('authToken');
+    sessionStorage.removeItem('token');
     sessionStorage.removeItem('userId');
     sessionStorage.removeItem('email');
     sessionStorage.removeItem('userName');
     setIsAuthenticated(false);
+    sessionStorage.removeItem('userName');
+    setIsAuthenticated(false);
     setCartCount(0);
     toast.success('Đã đăng xuất thành công!');
-    setIsSignOutOpen(false);
+    setIsUserMenuOpen(false);
+    setIsLogoutModalOpen(false);
   };
 
+  const handleMenuClick = (action) => {
+    switch (action) {
+      case 'profile':
+        navigate('/user');
+        break;
+      case 'orders':
+        navigate('/orders');
+        break;
+      case 'logout':
+        setIsLogoutModalOpen(true);
+        break;
+      default:
+        break;
+    }
+    setIsUserMenuOpen(false);
+  };
+
+  const isActive = (path) => {
+    return location.pathname === path;
+  };
+
+  const navLinks = [
+    { path: '/', label: 'Trang chủ', icon: faHome },
+    { path: '/can-cau', label: 'Cần câu', icon: faFish },
+    { path: '/do-cau', label: 'Đồ câu', icon: faTools },
+    { path: '/phu-kien', label: 'Phụ kiện', icon: faBox }
+  ];
+
   return (
-    <header className={`w-full pb-2 ${showbg ? ' bg-orange-500' : 'bg-transparent'} fixed top-0 left-0 z-10 transition-all`}>
-      <div className="max-w-screen-xl mx-auto px-4 py-4 flex justify-between items-center">
-        {/* Logo */}
-        <div className="flex items-center">
-          <Link to={'/'}>
-            <img src={''} alt="Logo" className="w-32" />
-          </Link>
-        </div>
+    <>
+      <header 
+        className={`w-full fixed top-0 left-0 z-50 transition-all duration-300 ${
+          showbg ? 'bg-blue-600 shadow-md' : 'bg-transparent'
+        }`}
+      >
+        <div className="max-w-screen-xl mx-auto py-3">
+          <div className="flex items-center justify-between">
+            {/* Logo */}
+            <Link to="/" className="flex items-center space-x-2">
+              {/* <img src="/logo.png" alt="Logo" className="h-12 w-auto" /> */}
+              <span className="text-xl font-bold text-white mr-4">Fishing Shop</span>
+            </Link>
 
-        {/* Navigation links */}
-        <div className="hidden md:flex space-x-8">
-          <Link to={'/'}>
-            <div className="text-black text-xl hover:text-gray-300">Trang chủ</div>
-          </Link>
-          <Link to={'/can-cau'}>
-            <div className="text-black text-xl hover:text-gray-300">Cần câu</div>
-          </Link>
-          <Link to='/do-cau'>
-            <div className="text-black text-xl hover:text-gray-300">Đồ câu</div>
-          </Link>
-          <Link to='/phu-kien'>
-            <div className="text-black text-xl hover:text-gray-300">Phụ kiện</div>
-          </Link>
-        </div>
+            {/* Navigation links */}
+            <nav className="hidden md:flex items-center space-x-8">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-md transition-colors ${
+                    isActive(link.path)
+                      ? 'text-white bg-blue-700'
+                      : 'text-gray-100 hover:text-white hover:bg-blue-700'
+                  }`}
+                >
+                  <FontAwesomeIcon icon={link.icon} className="w-5 h-5" />
+                  <span>{link.label}</span>
+                </Link>
+              ))}
+            </nav>
 
-        {/* Search bar */}
-        <Search />
+            {/* Search bar */}
+            <div className="flex-1 max-w-xl mx-4">
+              <Search />
+            </div>
 
-        {/* Cart and Login */}
-        <div className="flex items-center space-x-4">
-          {/* Cart */}
-          <Link to="/cart">
-            <div className="relative mr-6">
-              <span className="text-black text-xl hover:text-red-600"><FontAwesomeIcon icon={faShoppingCart} size="xl" /></span>
-              {isAuthenticated && cartCount > 0 && (
-                <span className="absolute -top-2 -right-4 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {cartCount}
+            {/* Cart and User */}
+            <div className="flex items-center space-x-4">
+              {/* Cart */}
+              <Link to="/cart" className="relative group">
+                <div className="p-2 rounded-full hover:bg-blue-700 transition-colors">
+                  <FontAwesomeIcon 
+                    icon={faShoppingCart} 
+                    className={`text-xl ${isActive('/cart') ? 'text-white' : 'text-gray-100'}`} 
+                  />
+                  {isAuthenticated && cartCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {cartCount}
+                    </span>
+                  )}
+                </div>
+                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                  Giỏ hàng
                 </span>
+              </Link>
+
+              {/* User Menu */}
+              {isAuthenticated ? (
+                <div className="relative">
+                  <button
+                    onClick={handleUserMenuClick}
+                    className="flex items-center space-x-2 p-2 rounded-full hover:bg-blue-700 transition-colors"
+                  >
+                    <img
+                      className="w-8 h-8 rounded-full border-2 border-white"
+                      src={defaultAvatar}
+                      alt="User Avatar"
+                    />
+                  </button>
+                  
+                  {/* User Menu Dropdown */}
+                  {isUserMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                      <button
+                        onClick={() => handleMenuClick('profile')}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <FontAwesomeIcon icon={faUserEdit} className="w-4 h-4 mr-2" />
+                        Thay đổi thông tin
+                      </button>
+                      <button
+                        onClick={() => handleMenuClick('orders')}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <FontAwesomeIcon icon={faClipboardList} className="w-4 h-4 mr-2" />
+                        Đơn hàng
+                      </button>
+                      <button
+                        onClick={() => handleMenuClick('logout')}
+                        className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                      >
+                        <FontAwesomeIcon icon={faSignOutAlt} className="w-4 h-4 mr-2" />
+                        Đăng xuất
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  to="/sign-in"
+                  className="flex items-center space-x-2 px-4 py-2 bg-white text-blue-600 rounded-md hover:bg-gray-100 transition-colors"
+                >
+                  <FontAwesomeIcon icon={faUser} />
+                  <span>Đăng nhập</span>
+                </Link>
               )}
             </div>
-          </Link>
-
-          {/* Check login status */}
-          {localStorage.getItem('token') ? (
-            <div className="flex items-center">
-              <img
-                className="w-10 h-10 rounded-full cursor-pointer"
-                src="https://avatars.githubusercontent.com/u/91184625?v=4"
-                alt="User Avatar"
-                onClick={handleOpenSignOut}
-              />
-              <SignOut
-                isOpen={isSignOutOpen}
-                onClose={handleCloseSignOut}
-                onLogout={handleLogout}
-              />
-            </div>
-          ) : (
-            <div className="hidden md:block">
-              <Link to='/sign-in'>
-                <button className="bg-black text-white py-2 px-4 rounded-md hover:bg-red-500 transition duration-300">
-                  Sign in
-                </button>
-              </Link>
-            </div>
-          )}
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmation
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={handleLogout}
+      />
+    </>
   );
 }
 

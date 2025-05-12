@@ -30,7 +30,7 @@ import Tippy from '@tippyjs/react/headless';
 import { Wrapper as PopperWrapper } from '~/components/Layout/Popper';
 import { useDebounce } from '~/hooks';
 
-function OrdersUser() {
+function OrdersAdmin() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -39,7 +39,7 @@ function OrdersUser() {
   const [showResult, setShowResult] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState('all'); // 'all', 'pending', 'ordered', 'shipping', 'completed', 'canceled'
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState({ orderId: null, action: null });
   const navigate = useNavigate();
@@ -59,7 +59,7 @@ function OrdersUser() {
     setLoading(true);
     setError('');
     try {
-      const url = 'http://localhost:3001/v1/orders/user';
+      const url = 'http://localhost:3001/v1/orders/admin';
       console.log('Gọi API đơn hàng:', url);
       const response = await axios.get(url, {
         headers: {
@@ -117,10 +117,7 @@ function OrdersUser() {
         order._id.toLowerCase().includes(searchLower) ||
         (order.fullName && order.fullName.toLowerCase().includes(searchLower)) ||
         (order.phone && order.phone.toLowerCase().includes(searchLower)) ||
-        (order.address && order.address.toLowerCase().includes(searchLower)) ||
-        order.items.some(item => 
-          item.productName && item.productName.toLowerCase().includes(searchLower)
-        )
+        (order.address && order.address.toLowerCase().includes(searchLower))
       );
     });
     setSearchResult(filteredOrders);
@@ -192,10 +189,7 @@ function OrdersUser() {
         order._id.toLowerCase().includes(searchValue.toLowerCase()) ||
         (order.fullName && order.fullName.toLowerCase().includes(searchValue.toLowerCase())) ||
         (order.phone && order.phone.toLowerCase().includes(searchValue.toLowerCase())) ||
-        (order.address && order.address.toLowerCase().includes(searchValue.toLowerCase())) ||
-        order.items.some(item => 
-          item.productName && item.productName.toLowerCase().includes(searchValue.toLowerCase())
-        )
+        (order.address && order.address.toLowerCase().includes(searchValue.toLowerCase()))
       )
     : filteredOrders;
 
@@ -207,6 +201,85 @@ function OrdersUser() {
     shipping: orders.filter(o => o.status === 'shipping').length,
     completed: orders.filter(o => o.status === 'completed').length,
     canceled: orders.filter(o => o.status === 'canceled').length,
+  };
+
+  // Hàm xử lý cập nhật trạng thái đơn hàng
+  const updateOrderStatus = async (orderId, action) => {
+    if (!/^[0-9a-fA-F]{24}$/.test(orderId)) {
+      console.error('Invalid orderId format:', orderId);
+      toast.error('ID đơn hàng không hợp lệ');
+      return;
+    }
+
+    setConfirmAction({ orderId, action });
+    setShowConfirmModal(true);
+  };
+
+  // Hàm xử lý xác nhận thay đổi trạng thái
+  const handleConfirmStatusChange = async () => {
+    const { orderId, action } = confirmAction;
+    const token = sessionStorage.getItem('token');
+    if (!token) {
+      toast.error('Vui lòng đăng nhập để cập nhật đơn hàng!');
+      navigate('/sign-in');
+      return;
+    }
+
+    try {
+      console.log('Gọi API cập nhật trạng thái:', `http://localhost:3001/v1/orders/admin/${orderId}/${action}`);
+      const response = await axios.put(
+        `http://localhost:3001/v1/orders/admin/${orderId}/${action}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      console.log('Phản hồi API:', response.data);
+      toast.success(response.data.message || 'Cập nhật trạng thái đơn hàng thành công!');
+
+      // Làm mới danh sách đơn hàng
+      await fetchOrders();
+    } catch (err) {
+      console.error(`Lỗi khi ${action === 'accept' ? 'xác nhận' : action === 'shipping' ? 'đánh dấu đang giao' : 'từ chối'} đơn hàng:`, {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+      });
+      let errorMessage = `Lỗi khi ${action === 'accept' ? 'xác nhận' : action === 'shipping' ? 'đánh dấu đang giao' : 'từ chối'} đơn hàng`;
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.status === 401) {
+        errorMessage = 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!';
+        sessionStorage.removeItem('token');
+        navigate('/sign-in');
+      } else if (err.response?.status === 404) {
+        errorMessage = 'Đơn hàng không tồn tại!';
+      } else if (err.response?.status === 400) {
+        errorMessage = err.response.data.message || 'Yêu cầu không hợp lệ!';
+      }
+      toast.error(errorMessage);
+    } finally {
+      setShowConfirmModal(false);
+      setConfirmAction({ orderId: null, action: null });
+    }
+  };
+
+  // Hàm lấy text cho action
+  const getActionText = (action) => {
+    switch (action) {
+      case 'accept':
+        return 'xác nhận';
+      case 'shipping':
+        return 'đánh dấu đang giao';
+      case 'completed':
+        return 'hoàn thành';
+      case 'reject':
+        return 'từ chối';
+      default:
+        return 'thực hiện';
+    }
   };
 
   // Hàm hiển thị trạng thái đơn hàng bằng tiếng Việt và icon
@@ -224,96 +297,6 @@ function OrdersUser() {
         return { text: 'Đã hủy', icon: faTimesCircle, color: 'text-red-600', bg: 'bg-red-50' };
       default:
         return { text: 'Không xác định', icon: faExclamationCircle, color: 'text-gray-600', bg: 'bg-gray-50' };
-    }
-  };
-
-  const handleCancelOrder = async (orderId) => {
-    try {
-      setLoading(true);
-      const token = sessionStorage.getItem('token');
-      if (!token) {
-        toast.error('Vui lòng đăng nhập để hủy đơn hàng!');
-        navigate('/sign-in');
-        return;
-      }
-
-      // Tìm đơn hàng cần hủy
-      const orderToCancel = orders.find(order => order._id === orderId);
-      if (!orderToCancel) {
-        toast.error('Không tìm thấy đơn hàng!');
-        return;
-      }
-
-      // Chuẩn bị dữ liệu sản phẩm cần hoàn trả
-      const productsToRestore = orderToCancel.items.map(item => ({
-        productId: item.productId.toString(),
-        quantity: parseInt(item.quantity, 10)
-      }));
-
-      console.log('Sending cancel request with data:', {
-        orderId,
-        productsToRestore
-      });
-
-      const response = await axios.put(
-        `http://localhost:3001/v1/orders/cancel/${orderId}`,
-        { productsToRestore },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-        }
-      );
-
-      console.log('Cancel order response:', response.data);
-
-      // Kiểm tra response và cập nhật UI
-      if (response.data) {
-        // Cập nhật lại danh sách đơn hàng
-        const updatedOrders = orders.map(order => 
-          order._id === orderId ? { ...order, status: 'canceled' } : order
-        );
-        setOrders(updatedOrders);
-        setError(null);
-        // Hiển thị thông báo thành công
-        toast.success(response.data.message || 'Hủy đơn hàng thành công!');
-        // Đóng modal xác nhận
-        setShowConfirmModal(false);
-        setConfirmAction({ orderId: null, action: null });
-        // Refresh danh sách đơn hàng
-        await fetchOrders();
-      } else {
-        throw new Error('Không nhận được phản hồi từ server');
-      }
-    } catch (error) {
-      console.error('Error canceling order:', error);
-      let errorMessage = 'Có lỗi xảy ra khi hủy đơn hàng';
-      
-      if (error.response) {
-        // Server trả về response với status code ngoài range 2xx
-        errorMessage = error.response.data?.message || `Lỗi server: ${error.response.status}`;
-        console.error('Server error details:', error.response.data);
-      } else if (error.request) {
-        // Request được gửi nhưng không nhận được response
-        errorMessage = 'Không thể kết nối đến server';
-        console.error('Network error:', error.request);
-      } else {
-        // Có lỗi khi setting up request
-        errorMessage = error.message;
-        console.error('Request setup error:', error);
-      }
-
-      if (error.response?.status === 401) {
-        errorMessage = 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!';
-        sessionStorage.removeItem('token');
-        navigate('/sign-in');
-      }
-
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -339,14 +322,14 @@ function OrdersUser() {
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-4">
                 <button
-                  onClick={() => navigate('/')}
+                  onClick={() => navigate('/admin/dashboard')}
                   className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition duration-300"
                 >
                   <FontAwesomeIcon icon={faArrowLeft} />
-                  <span>Quay lại trang chủ</span>
+                  <span>Quay lại Dashboard</span>
                 </button>
               </div>
-              <h1 className="text-3xl font-bold text-gray-900 absolute left-1/2 transform -translate-x-1/2">Đơn hàng của tôi</h1>
+              <h1 className="text-3xl font-bold text-gray-900 absolute left-1/2 transform -translate-x-1/2">Quản lý đơn hàng</h1>
             </div>
 
             {/* Bộ lọc tìm kiếm */}
@@ -384,9 +367,6 @@ function OrdersUser() {
                               <div className="text-sm text-gray-500">
                                 {order.fullName} - {order.phone}
                               </div>
-                              <div className="text-sm text-gray-500 mt-1">
-                                Sản phẩm: {order.items.map(item => item.productName).join(', ')}
-                              </div>
                             </div>
                           ))}
                         </PopperWrapper>
@@ -395,13 +375,13 @@ function OrdersUser() {
                     onClickOutside={handleHideResult}
                   >
                     <div className="relative">
-                <input
+                      <input
                         ref={inputRef}
-                  type="text"
+                        type="text"
                         value={searchValue}
                         onChange={(e) => setSearchValue(e.target.value)}
                         onFocus={() => setShowResult(true)}
-                  placeholder="Tìm kiếm theo mã đơn hàng hoặc tên sản phẩm..."
+                        placeholder="Tìm kiếm theo mã đơn hàng hoặc tên khách hàng..."
                         className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                       {!!searchValue && (
@@ -412,10 +392,10 @@ function OrdersUser() {
                           <FontAwesomeIcon icon={faCircleXmark} />
                         </button>
                       )}
-                <FontAwesomeIcon
-                  icon={faSearch}
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                />
+                      <FontAwesomeIcon
+                        icon={faSearch}
+                        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                      />
                     </div>
                   </Tippy>
                 </div>
@@ -550,6 +530,14 @@ function OrdersUser() {
                                   <FontAwesomeIcon icon={faMapMarkerAlt} className="w-5 mr-2" />
                                   <span>{order.address || 'Chưa cập nhật'}</span>
                                 </div>
+                                <div className="flex items-center text-gray-600">
+                                  <FontAwesomeIcon icon={faClipboardList} className="w-5 mr-2" />
+                                  <span>Mã đơn hàng: {order._id.slice(-6)}</span>
+                                </div>
+                                <div className="flex items-center text-gray-600">
+                                  <FontAwesomeIcon icon={faUser} className="w-5 mr-2" />
+                                  <span>ID người dùng: {order.userId}</span>
+                                </div>
                               </div>
                               <div className="space-y-2">
                                 <div className="flex items-center text-gray-600">
@@ -564,6 +552,10 @@ function OrdersUser() {
                                   <FontAwesomeIcon icon={faCalendarAlt} className="w-5 mr-2" />
                                   <span>Tạo lúc: {new Date(order.createdAt).toLocaleString('vi-VN')}</span>
                                 </div>
+                                <div className="flex items-center text-gray-600">
+                                  <FontAwesomeIcon icon={faCalendarAlt} className="w-5 mr-2" />
+                                  <span>Cập nhật: {new Date(order.updatedAt).toLocaleString('vi-VN')}</span>
+                                </div>
                                 {order.note && (
                                   <div className="flex items-center text-gray-600">
                                     <FontAwesomeIcon icon={faStickyNote} className="w-5 mr-2" />
@@ -573,19 +565,44 @@ function OrdersUser() {
                               </div>
                             </div>
                           </div>
-                          {order.status === 'pending' && (
-                            <button
-                              onClick={() => {
-                                setConfirmAction({ orderId: order._id, action: 'cancel' });
-                                setShowConfirmModal(true);
-                              }}
-                              className="mt-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors flex items-center gap-2"
-                              disabled={loading}
-                            >
-                              <FontAwesomeIcon icon={faBan} />
-                              {loading ? 'Đang xử lý...' : 'Hủy đơn hàng'}
-                            </button>
-                          )}
+                          <div className="flex gap-2">
+                            {order.status === 'pending' && (
+                              <>
+                                <button
+                                  onClick={() => updateOrderStatus(order._id, 'accept')}
+                                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-300 flex items-center"
+                                >
+                                  <FontAwesomeIcon icon={faCheck} className="mr-2" />
+                                  Xác nhận
+                                </button>
+                                <button
+                                  onClick={() => updateOrderStatus(order._id, 'reject')}
+                                  className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-300 flex items-center"
+                                >
+                                  <FontAwesomeIcon icon={faBan} className="mr-2" />
+                                  Hủy
+                                </button>
+                              </>
+                            )}
+                            {order.status === 'ordered' && (
+                              <button
+                                onClick={() => updateOrderStatus(order._id, 'shipping')}
+                                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-300 flex items-center"
+                              >
+                                <FontAwesomeIcon icon={faTruck} className="mr-2" />
+                                Đang giao
+                              </button>
+                            )}
+                            {order.status === 'shipping' && (
+                              <button
+                                onClick={() => updateOrderStatus(order._id, 'completed')}
+                                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-300 flex items-center"
+                              >
+                                <FontAwesomeIcon icon={faCheckCircle} className="mr-2" />
+                                Hoàn thành
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         {/* Danh sách sản phẩm */}
@@ -664,28 +681,25 @@ function OrdersUser() {
               />
             </div>
             <h3 className="text-xl font-semibold text-gray-900 text-center mb-2">
-              Xác nhận hủy đơn hàng
+              Xác nhận thay đổi
             </h3>
             <p className="text-gray-600 text-center mb-6">
-              Bạn có chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác.
+              Bạn có chắc chắn muốn {getActionText(confirmAction.action)} đơn hàng này?
             </p>
             <div className="flex justify-center gap-4">
               <button
-                onClick={() => {
-                  setShowConfirmModal(false);
-                  setConfirmAction({ orderId: null, action: null });
-                }}
+                onClick={() => setShowConfirmModal(false)}
                 className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition duration-300"
               >
                 Hủy
               </button>
               <button
-                onClick={() => {
-                  if (confirmAction.orderId) {
-                    handleCancelOrder(confirmAction.orderId);
-                  }
-                }}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition duration-300"
+                onClick={handleConfirmStatusChange}
+                className={`px-4 py-2 text-white rounded-lg transition duration-300 ${
+                  confirmAction.action === 'reject'
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
               >
                 Xác nhận
               </button>
@@ -697,4 +711,4 @@ function OrdersUser() {
   );
 }
 
-export default OrdersUser;
+export default OrdersAdmin;

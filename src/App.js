@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { publicRoutes } from './routes';
-import DefaultLayout from './components/Layout/DefaultLayout';
+import { publicRoutes, privateRoutes } from './routes';
+import { Fragment } from 'react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -21,8 +21,13 @@ function App() {
         />
         <Routes>
           {publicRoutes.map((route, index) => {
-            const Layout = route.layout || DefaultLayout;
             const Page = route.component;
+            let Layout = Fragment;
+
+            if (route.layout) {
+              Layout = route.layout;
+            }
+
             return (
               <Route
                 key={index}
