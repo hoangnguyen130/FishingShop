@@ -176,7 +176,6 @@ function Checkout() {
             Authorization: `Bearer ${token}`,
           },
         });
-        console.log('Giỏ hàng đã được xóa');
         setCart({ items: [] });
       } catch (deleteErr) {
         console.error('Lỗi khi xóa giỏ hàng:', {
@@ -184,7 +183,6 @@ function Checkout() {
           response: deleteErr.response?.data,
           status: deleteErr.response?.status,
         });
-        toast.warn('Đơn hàng đã được tạo, nhưng không thể xóa giỏ hàng. Vui lòng kiểm tra lại!');
       }
 
       navigate('/orders');
