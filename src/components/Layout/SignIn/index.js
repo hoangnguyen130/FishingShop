@@ -39,7 +39,11 @@ const SignIn = () => {
         sessionStorage.setItem('userName', user.userName);
         sessionStorage.setItem('role', user.role);
         toast.success('Đăng nhập thành công!');
-        navigate('/');
+        if (user.role === 'admin') {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/');
+        }
       }
     } catch (error) {
       console.error('Login error:', error);

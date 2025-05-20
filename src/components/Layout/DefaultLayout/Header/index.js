@@ -14,14 +14,7 @@ import {
   faBox,
   faUserEdit,
   faClipboardList,
-  faTimes,
-  faSignInAlt,
-  faUserPlus,
-  faBars,
-  faChartLine,
-  faStore,
-  faUsers,
-  faPlus
+  faTimes
 } from '@fortawesome/free-solid-svg-icons';
 import defaultAvatar from '~/assets/imgs/default-avatar.webp';
 
