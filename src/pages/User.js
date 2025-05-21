@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCamera, faSave, faUser, faEnvelope, faPhone, faMapMarkerAlt, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { faCamera, faSave, faUser, faEnvelope, faPhone, faMapMarkerAlt, faArrowLeft, faLock } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router-dom';
 import avt from '~/assets/imgs/default-avatar.webp';
 
@@ -20,6 +20,13 @@ function UserPage() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   useEffect(() => {
     fetchUserInfo();
@@ -160,6 +167,67 @@ function UserPage() {
     }
   };
 
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate passwords
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      toast.error('Vui lòng điền đầy đủ thông tin');
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error('Mật khẩu mới không khớp');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      toast.error('Mật khẩu mới phải có ít nhất 6 ký tự');
+      return;
+    }
+
+    try {
+      setIsChangingPassword(true);
+      const token = sessionStorage.getItem('token');
+      
+      const response = await axios.put(
+        'http://localhost:3001/v1/auth/change-password',
+        {
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data) {
+        toast.success('Đổi mật khẩu thành công');
+        setShowPasswordModal(false);
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+      }
+    } catch (error) {
+      console.error('Error changing password:', error);
+      toast.error(error.response?.data?.message || 'Đổi mật khẩu thất bại');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -206,18 +274,27 @@ function UserPage() {
                 <h1 className="text-2xl font-bold text-white mb-2">{userInfo.userName}</h1>
                 <p className="text-blue-100">{userInfo.email}</p>
               </div>
-              <button
-                onClick={() => {
-                  setIsEditing(!isEditing);
-                  if (!isEditing) {
-                    setSelectedFile(null);
-                    setPreviewUrl(null);
-                  }
-                }}
-                className="px-4 py-2 bg-white text-blue-600 rounded-md hover:bg-gray-100 transition-colors"
-              >
-                {isEditing ? 'Hủy' : 'Chỉnh sửa'}
-              </button>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setShowPasswordModal(true)}
+                  className="px-4 py-2 bg-white text-blue-600 rounded-md hover:bg-gray-100 transition-colors"
+                >
+                  <FontAwesomeIcon icon={faLock} className="mr-2" />
+                  Đổi mật khẩu
+                </button>
+                <button
+                  onClick={() => {
+                    setIsEditing(!isEditing);
+                    if (!isEditing) {
+                      setSelectedFile(null);
+                      setPreviewUrl(null);
+                    }
+                  }}
+                  className="px-4 py-2 bg-white text-blue-600 rounded-md hover:bg-gray-100 transition-colors"
+                >
+                  {isEditing ? 'Hủy' : 'Chỉnh sửa'}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -310,6 +387,79 @@ function UserPage() {
           </form>
         </div>
       </div>
+
+      {/* Password Change Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Đổi Mật Khẩu</h2>
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mật khẩu hiện tại
+                </label>
+                <input
+                  type="password"
+                  name="currentPassword"
+                  value={passwordData.currentPassword}
+                  onChange={handlePasswordChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Nhập mật khẩu hiện tại"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mật khẩu mới
+                </label>
+                <input
+                  type="password"
+                  name="newPassword"
+                  value={passwordData.newPassword}
+                  onChange={handlePasswordChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Nhập mật khẩu mới"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Xác nhận mật khẩu mới
+                </label>
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  value={passwordData.confirmPassword}
+                  onChange={handlePasswordChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Nhập lại mật khẩu mới"
+                />
+              </div>
+              <div className="flex justify-end space-x-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPasswordModal(false);
+                    setPasswordData({
+                      currentPassword: '',
+                      newPassword: '',
+                      confirmPassword: ''
+                    });
+                  }}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={isChangingPassword}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-300"
+                >
+                  {isChangingPassword ? 'Đang xử lý...' : 'Đổi mật khẩu'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
