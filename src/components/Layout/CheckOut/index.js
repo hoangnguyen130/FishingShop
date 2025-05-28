@@ -19,6 +19,7 @@ function Checkout() {
   const [cart, setCart] = useState({ items: [] });
   const [error, setError] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -28,6 +29,46 @@ function Checkout() {
     note: '',
   });
   const [formErrors, setFormErrors] = useState({});
+  const userId = sessionStorage.getItem('userId');
+
+  // Fetch user profile data
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      const token = sessionStorage.getItem('token');
+      if (!token) return;
+
+      setIsLoadingProfile(true);
+      try {
+        const response = await axios.get('http://localhost:3001/v1/auth/profile', {
+          params: { userId },
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        
+        if (response.data) {
+          setFormData(prev => ({
+            ...prev,
+            fullName: response.data.user.userName || '',
+            phone: response.data.user.phone || '',
+            address: response.data.user.address || '',
+          }));
+        }
+      } catch (err) {
+        console.error('Lỗi khi lấy thông tin người dùng:', err);
+        if (err.response?.status === 401) {
+          toast.error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!');
+          sessionStorage.removeItem('token');
+          navigate('/sign-in');
+        } else {
+          toast.error('Không thể lấy thông tin người dùng. Vui lòng nhập thủ công!');
+        }
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [navigate]);
 
   // Lấy giỏ hàng từ API
   useEffect(() => {
@@ -274,6 +315,12 @@ function Checkout() {
                 <div className="space-y-6">
                   <div className="bg-white rounded-lg border border-gray-200 p-6">
                     <h2 className="text-xl font-semibold text-gray-900 mb-6">Thông tin giao hàng</h2>
+                    {isLoadingProfile && (
+                      <div className="text-center py-4">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="text-gray-600 mt-2">Đang tải thông tin...</p>
+                      </div>
+                    )}
                     <form onSubmit={handleSubmit} className="space-y-4">
                       <div>
                         <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">

@@ -60,8 +60,36 @@ function Header() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [userAvatar, setUserAvatar] = useState(defaultAvatar);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Lấy thông tin người dùng từ API
+  useEffect(() => {
+    const token = sessionStorage.getItem('token');
+    const userId = sessionStorage.getItem('userId');
+    if (!token || !userId) {
+      setCartCount(0);
+      return;
+    }
+    setIsAuthenticated(true);
+
+    const fetchUserProfile = async () => {
+      try {
+        const response = await axios.get(`http://localhost:3001/v1/auth/profile?userId=${userId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setUserAvatar(response.data.user.avatar || defaultAvatar);
+      } catch (err) {
+        console.error('Lỗi khi lấy thông tin người dùng:', err);
+        setUserAvatar(defaultAvatar);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
 
   // Lấy số lượng sản phẩm trong giỏ hàng từ API
   useEffect(() => {
@@ -204,9 +232,7 @@ function Header() {
                     </span>
                   )}
                 </div>
-                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                  Giỏ hàng
-                </span>
+
               </Link>
 
               {/* User Menu */}
@@ -214,37 +240,62 @@ function Header() {
                 <div className="relative">
                   <button
                     onClick={handleUserMenuClick}
-                    className="flex items-center space-x-2 p-2 rounded-full hover:bg-blue-700 transition-colors"
+                    className="flex items-center space-x-2 p-2 rounded-full hover:bg-blue-700 transition-colors group"
                   >
-                    <img
-                      className="w-8 h-8 rounded-full border-2 border-white"
-                      src={defaultAvatar}
-                      alt="User Avatar"
-                    />
+                    <div className="relative">
+                      <img
+                        className="w-10 h-10 rounded-full border-2 border-white object-cover shadow-md hover:shadow-lg transition-all duration-300"
+                        src={userAvatar}
+                        alt="User Avatar"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = defaultAvatar;
+                        }}
+                      />
+                      <div className="absolute inset-0 rounded-full bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300"></div>
+                    </div>
                   </button>
                   
                   {/* User Menu Dropdown */}
                   {isUserMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl py-2 z-50 border border-gray-100">
+                      <div className="px-4 py-3 border-b border-gray-100">
+                        <div className="flex items-center space-x-3">
+                          <img
+                            className="w-10 h-10 rounded-full border-2 border-blue-500 object-cover"
+                            src={userAvatar}
+                            alt="User Avatar"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = defaultAvatar;
+                            }}
+                          />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{sessionStorage.getItem('userName')}</p>
+                            <p className="text-xs text-gray-500">{sessionStorage.getItem('email')}</p>
+                          </div>
+                        </div>
+                      </div>
                       <button
                         onClick={() => handleMenuClick('profile')}
-                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                       >
-                        <FontAwesomeIcon icon={faUserEdit} className="w-4 h-4 mr-2" />
+                        <FontAwesomeIcon icon={faUserEdit} className="w-4 h-4 mr-3 text-blue-500" />
                         Thay đổi thông tin
                       </button>
                       <button
                         onClick={() => handleMenuClick('orders')}
-                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                       >
-                        <FontAwesomeIcon icon={faClipboardList} className="w-4 h-4 mr-2" />
+                        <FontAwesomeIcon icon={faClipboardList} className="w-4 h-4 mr-3 text-blue-500" />
                         Đơn hàng
                       </button>
+                      <div className="border-t border-gray-100 my-1"></div>
                       <button
                         onClick={() => handleMenuClick('logout')}
-                        className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                        className="flex items-center w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
                       >
-                        <FontAwesomeIcon icon={faSignOutAlt} className="w-4 h-4 mr-2" />
+                        <FontAwesomeIcon icon={faSignOutAlt} className="w-4 h-4 mr-3" />
                         Đăng xuất
                       </button>
                     </div>

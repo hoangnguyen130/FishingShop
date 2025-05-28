@@ -12,7 +12,9 @@ import {
   faStore,
   faClipboardList,
   faBoxesStacked,
-  faTags
+  faTags,
+  faSearch,
+  faUser
 } from '@fortawesome/free-solid-svg-icons';
 
 const AdminDashboard = () => {
@@ -21,38 +23,80 @@ const AdminDashboard = () => {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [users, setUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const messagesEndRef = React.useRef(null);
   const socket = React.useRef(null);
 
   const adminId = sessionStorage.getItem('userId');
 
+  // Fetch users who have chatted with admin
+  useEffect(() => {
+    const fetchChatUsers = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`http://localhost:3001/v1/messages/admin-chat/${adminId}`);
+        setUsers(response.data.users || []);
+      } catch (err) {
+        console.error('Error fetching chat users:', err);
+        setError('Không thể tải danh sách người dùng. Vui lòng thử lại sau.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchChatUsers();
+  }, [adminId]);
+
+  // Socket connection
   useEffect(() => {
     socket.current = io('http://localhost:3001');
     socket.current.emit('join_chat', adminId);
 
     socket.current.on('receive_message', (messageData) => {
-      setMessages(prev => [...prev, {
-        id: Date.now(),
-        sender: messageData.sender,
-        text: messageData.text,
-        timestamp: new Date().toISOString(),
-        isRead: false
-      }]);
+      if (selectedUser && messageData.sender === selectedUser._id) {
+        setMessages(prev => [...prev, {
+          id: Date.now(),
+          sender: messageData.sender,
+          text: messageData.text,
+          timestamp: new Date().toISOString(),
+          isRead: false
+        }]);
+      }
     });
 
     return () => {
       socket.current.disconnect();
     };
-  }, [adminId]);
+  }, [adminId, selectedUser]);
+
+  // Load messages when selecting a user
+  useEffect(() => {
+    if (selectedUser) {
+      const fetchMessages = async () => {
+        try {
+          const response = await axios.get(`http://localhost:3001/v1/messages/${adminId}/${selectedUser._id}`, {
+            headers: {
+              Authorization: `Bearer ${sessionStorage.getItem('token')}`
+            }
+          });
+          setMessages(response.data.messages || []);
+        } catch (err) {
+          console.error('Error fetching messages:', err);
+        }
+      };
+      fetchMessages();
+    }
+  }, [selectedUser, adminId]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!message.trim()) return;
+    if (!message.trim() || !selectedUser) return;
 
     try {
       const messageData = {
         id_user1: adminId,
-        id_user2: 'support', // Changed to a fixed support channel
+        id_user2: selectedUser._id,
         content: [{
           sender: adminId,
           text: message,
@@ -61,11 +105,11 @@ const AdminDashboard = () => {
         }]
       };
 
-      const response = await axios.post('http://localhost:3001/v1/messages', messageData);
+      await axios.post('http://localhost:3001/v1/messages', messageData);
       
       socket.current.emit('send_message', {
         senderId: adminId,
-        receiverId: 'support',
+        receiverId: selectedUser._id,
         message: message
       });
 
@@ -90,6 +134,17 @@ const AdminDashboard = () => {
       minute: '2-digit',
     });
   };
+
+  const formatLastMessage = (lastMessage) => {
+    if (!lastMessage) return '';
+    const text = lastMessage.text;
+    return text.length > 30 ? text.substring(0, 30) + '...' : text;
+  };
+
+  const filteredUsers = users.filter(user => 
+    user.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20 pb-12">
@@ -197,72 +252,158 @@ const AdminDashboard = () => {
             <FontAwesomeIcon icon={faComments} size="lg" />
           </button>
         ) : (
-          <div className="w-[350px] md:w-[400px] bg-white rounded-lg shadow-xl overflow-hidden flex flex-col h-[600px]">
-            {/* Header */}
-            <div className="bg-blue-600 text-white p-4 flex justify-between items-center">
-              <h2 className="text-lg font-semibold">Hỗ trợ khách hàng</h2>
-              <button
-                onClick={() => setIsChatOpen(false)}
-                className="text-white hover:text-gray-200 transition-colors"
-                aria-label="Đóng chat"
-              >
-                <FontAwesomeIcon icon={faTimes} />
-              </button>
-            </div>
-
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
-              {loading ? (
-                <div className="text-center text-gray-500">Đang tải tin nhắn...</div>
-              ) : error ? (
-                <div className="text-red-500 text-center">{error}</div>
-              ) : messages.length === 0 ? (
-                <div className="text-center text-gray-500">
-                  Chưa có tin nhắn nào
+          <div className="w-[800px] bg-white rounded-lg shadow-xl overflow-hidden flex h-[600px]">
+            {/* Users List */}
+            <div className="w-1/3 border-r bg-gray-50">
+              <div className="p-4 border-b">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Người dùng đã nhắn tin</h2>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm người dùng..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full p-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-3 text-gray-400" />
                 </div>
-              ) : (
-                messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`mb-4 flex ${msg.sender === adminId ? 'justify-end' : 'justify-start'}`}
-                  >
+              </div>
+              <div className="overflow-y-auto h-[calc(100%-80px)]">
+                {loading ? (
+                  <div className="p-4 text-center text-gray-500">
+                    Đang tải danh sách người dùng...
+                  </div>
+                ) : error ? (
+                  <div className="p-4 text-center text-red-500">
+                    {error}
+                  </div>
+                ) : filteredUsers.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500">
+                    {searchTerm ? 'Không tìm thấy người dùng nào' : 'Chưa có người dùng nào nhắn tin'}
+                  </div>
+                ) : (
+                  filteredUsers.map(user => (
                     <div
-                      className={`max-w-[80%] rounded-lg p-3 ${
-                        msg.sender === adminId
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-200 text-gray-800'
+                      key={user._id}
+                      onClick={() => setSelectedUser(user)}
+                      className={`p-4 cursor-pointer hover:bg-gray-100 transition-colors ${
+                        selectedUser?._id === user._id ? 'bg-blue-50' : ''
                       }`}
                     >
-                      <div className="text-sm">{msg.text}</div>
-                      <div className="text-xs mt-1 opacity-75">
-                        {formatTime(msg.timestamp)}
+                      <div className="flex items-center space-x-3">
+                        <div className="relative">
+                          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                            <FontAwesomeIcon icon={faUser} className="text-blue-600" />
+                          </div>
+                          {user.unreadCount > 0 && (
+                            <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                              {user.unreadCount}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start">
+                            <p className="font-medium text-gray-900 truncate">{user.userName}</p>
+                            {user.lastMessage && (
+                              <span className="text-xs text-gray-500">
+                                {formatTime(user.lastMessage.timestamp)}
+                              </span>
+                            )}
+                          </div>
+                          {user.lastMessage && (
+                            <p className="text-sm text-gray-500 truncate">
+                              {user.lastMessage.sender === adminId ? 'Bạn: ' : ''}
+                              {formatLastMessage(user.lastMessage)}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
-              )}
-              <div ref={messagesEndRef} />
+                  ))
+                )}
+              </div>
             </div>
 
-            {/* Message Input */}
-            <form onSubmit={handleSendMessage} className="p-4 border-t">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Nhập tin nhắn..."
-                  className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+            {/* Chat Area */}
+            <div className="flex-1 flex flex-col">
+              {/* Header */}
+              <div className="bg-blue-600 text-white p-4 flex justify-between items-center">
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    {selectedUser ? `Chat với ${selectedUser.userName}` : 'Chọn người dùng để chat'}
+                  </h2>
+                  {selectedUser && (
+                    <p className="text-sm text-blue-100">{selectedUser.email}</p>
+                  )}
+                </div>
                 <button
-                  type="submit"
-                  className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-colors"
-                  disabled={!message.trim()}
+                  onClick={() => setIsChatOpen(false)}
+                  className="text-white hover:text-gray-200 transition-colors"
+                  aria-label="Đóng chat"
                 >
-                  <FontAwesomeIcon icon={faPaperPlane} />
+                  <FontAwesomeIcon icon={faTimes} />
                 </button>
               </div>
-            </form>
+
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+                {!selectedUser ? (
+                  <div className="h-full flex items-center justify-center text-gray-500">
+                    Chọn người dùng để bắt đầu chat
+                  </div>
+                ) : loading ? (
+                  <div className="text-center text-gray-500">Đang tải tin nhắn...</div>
+                ) : error ? (
+                  <div className="text-red-500 text-center">{error}</div>
+                ) : messages.length === 0 ? (
+                  <div className="text-center text-gray-500">
+                    Chưa có tin nhắn nào
+                  </div>
+                ) : (
+                  messages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`mb-4 flex ${msg.sender === adminId ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-[80%] rounded-lg p-3 ${
+                          msg.sender === adminId
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-200 text-gray-800'
+                        }`}
+                      >
+                        <div className="text-sm">{msg.text}</div>
+                        <div className="text-xs mt-1 opacity-75">
+                          {formatTime(msg.timestamp)}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Message Input */}
+              <form onSubmit={handleSendMessage} className="p-4 border-t">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder={selectedUser ? "Nhập tin nhắn..." : "Chọn người dùng để chat"}
+                    disabled={!selectedUser}
+                    className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  />
+                  <button
+                    type="submit"
+                    className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+                    disabled={!message.trim() || !selectedUser}
+                  >
+                    <FontAwesomeIcon icon={faPaperPlane} />
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
       </div>

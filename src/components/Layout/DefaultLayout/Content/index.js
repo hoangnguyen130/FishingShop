@@ -8,6 +8,9 @@ import Slider from 'react-slick';
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import ChatContainer from '../../ChatContainer';
+import banner1 from '~/assets/imgs/banner-can-cau.png';
+import banner2 from '~/assets/imgs/banner-phu-kien.png';
+import banner3 from '~/assets/imgs/banner-moi-cau.png';
 
 const BannerSlider = () => {
   const settings = {
@@ -36,7 +39,7 @@ const BannerSlider = () => {
   const banners = [
     {
       id: 1,
-      image: 'https://images.unsplash.com/photo-1601758124510-52d02ddb7cbd?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80',
+      image: banner1,
       title: 'Cần câu chính hãng',
       description: 'Khám phá bộ sưu tập cần câu chất lượng cao',
       buttonText: 'Xem ngay',
@@ -44,7 +47,7 @@ const BannerSlider = () => {
     },
     {
       id: 2,
-      image: 'https://images.unsplash.com/photo-1599583097688-0c4c0c0c0c0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80',
+      image: banner2,
       title: 'Phụ kiện câu cá',
       description: 'Đầy đủ phụ kiện cho người đam mê câu cá',
       buttonText: 'Mua ngay',
@@ -52,7 +55,7 @@ const BannerSlider = () => {
     },
     {
       id: 3,
-      image: 'https://images.unsplash.com/photo-1599583097688-0c4c0c0c0c0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80',
+      image: banner3,
       title: 'Mồi câu đặc biệt',
       description: 'Các loại mồi câu chất lượng cao',
       buttonText: 'Khám phá',

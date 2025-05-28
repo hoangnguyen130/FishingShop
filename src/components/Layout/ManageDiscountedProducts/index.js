@@ -44,6 +44,8 @@ const ManageDiscountedProducts = () => {
   const [discountPercentage, setDiscountPercentage] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
+  const [showRemoveDiscountModal, setShowRemoveDiscountModal] = useState(false);
+  const [productToRemoveDiscount, setProductToRemoveDiscount] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -145,6 +147,34 @@ const ManageDiscountedProducts = () => {
   const openDiscountModal = (product) => {
     setSelectedProduct(product);
     setShowDiscountModal(true);
+  };
+
+  const handleRemoveDiscount = async (productId) => {
+    setProductToRemoveDiscount(productId);
+    setShowRemoveDiscountModal(true);
+  };
+
+  const confirmRemoveDiscount = async () => {
+    try {
+      const token = sessionStorage.getItem('token');
+      await axios.post(
+        'http://localhost:3001/v1/products/remove-discount',
+        {
+          productId: productToRemoveDiscount
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      
+      toast.success('Xóa giảm giá thành công!');
+      setShowRemoveDiscountModal(false);
+      setProductToRemoveDiscount(null);
+      fetchProducts();
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || 'Lỗi khi xóa giảm giá. Vui lòng thử lại!';
+      toast.error(errorMessage);
+    }
   };
 
   return (
@@ -249,15 +279,22 @@ const ManageDiscountedProducts = () => {
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <button
                               onClick={() => openDiscountModal(product)}
-                              className="mr-3 text-green-500 hover:text-green-700 bg-green-100 p-2 rounded-full"
+                              className="text-green-600 hover:text-green-900 mr-4 bg-green-100 p-2 rounded-full"
                               title="Sửa giảm giá"
                             >
                               <FontAwesomeIcon icon={faPercent} size="lg" />
                             </button>
                             <button
+                              onClick={() => handleRemoveDiscount(product._id)}
+                              className="text-red-600 hover:text-red-900 mr-4 bg-red-100 p-2 rounded-full"
+                              title="Xóa giảm giá"
+                            >
+                              <FontAwesomeIcon icon={faTag} size="lg" />
+                            </button>
+                            <button
                               onClick={() => handleDelete(product._id)}
-                              className="text-red-500 hover:text-red-700 bg-red-100 p-2 rounded-full"
-                              title="Xóa"
+                              className="text-red-600 hover:text-red-900 bg-red-100 p-2 rounded-full"
+                              title="Xóa sản phẩm"
                             >
                               <FontAwesomeIcon icon={faTrash} size="lg" />
                             </button>
@@ -329,6 +366,30 @@ const ManageDiscountedProducts = () => {
                       className="px-4 py-2 bg-red-600 text-white rounded-lg"
                     >
                       Xóa
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Remove Discount Confirmation Modal */}
+            {showRemoveDiscountModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg p-6 w-full max-w-md">
+                  <h2 className="text-xl font-bold mb-4">Xác nhận xóa giảm giá</h2>
+                  <p className="mb-4">Bạn có chắc chắn muốn xóa giảm giá của sản phẩm này không?</p>
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => setShowRemoveDiscountModal(false)}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg mr-2"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      onClick={confirmRemoveDiscount}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg"
+                    >
+                      Xóa giảm giá
                     </button>
                   </div>
                 </div>

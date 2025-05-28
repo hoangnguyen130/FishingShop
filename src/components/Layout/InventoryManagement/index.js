@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBox, faEdit, faTrash, faSearch, faArrowLeft, faStore, faTag, faPercent } from '@fortawesome/free-solid-svg-icons';
+import { faBox, faEdit, faTrash, faSearch, faArrowLeft, faStore, faTag, faPercent, faTimes } from '@fortawesome/free-solid-svg-icons';
 import ChatContainer from '../ChatContainer';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -169,6 +169,34 @@ function InventoryManagement() {
       fetchProductsAndSales(); // Refresh the product list
     } catch (error) {
       toast.error(error.response?.data?.message || 'Không thể áp dụng giảm giá');
+    }
+  };
+
+  const handleRemoveDiscount = async () => {
+    if (!selectedProduct) {
+      toast.error('Không tìm thấy sản phẩm');
+      return;
+    }
+
+    try {
+      const token = sessionStorage.getItem('token');
+      const response = await axios.post(
+        'http://localhost:3001/v1/products/remove-discount',
+        {
+          productId: selectedProduct._id
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      toast.success('Xóa giảm giá thành công!');
+      setShowDiscountModal(false);
+      setDiscountPercentage('');
+      setSelectedProduct(null);
+      fetchProductsAndSales(); // Refresh the product list
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Không thể xóa giảm giá');
     }
   };
 
@@ -356,61 +384,102 @@ function InventoryManagement() {
 
       {/* Discount Modal */}
       {showDiscountModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
-          <div className="relative p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">
-                Áp dụng giảm giá cho {selectedProduct?.productName}
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
+          <div className="relative p-6 border w-96 shadow-lg rounded-lg bg-white">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-gray-900">
+                {selectedProduct?.discountPercentage > 0 ? 'Chỉnh sửa giảm giá' : 'Áp dụng giảm giá'}
               </h3>
-              <div className="mt-2 px-7 py-3">
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Phần trăm giảm giá
-                  </label>
-                  <div className="grid grid-cols-4 gap-2 mb-3">
-                    {[10, 20, 30, 50].map((percent) => (
-                      <button
-                        key={percent}
-                        onClick={() => setDiscountPercentage(percent.toString())}
-                        className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                          discountPercentage === percent.toString()
-                            ? 'bg-green-500 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        {percent}%
-                      </button>
-                    ))}
-                  </div>
-                  <input
-                    type="number"
-                    value={discountPercentage}
-                    onChange={(e) => setDiscountPercentage(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                    placeholder="Hoặc nhập phần trăm giảm giá"
-                    min="1"
-                    max="100"
-                  />
+              <button
+                onClick={() => {
+                  setShowDiscountModal(false);
+                  setDiscountPercentage('');
+                  setSelectedProduct(null);
+                }}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <FontAwesomeIcon icon={faTimes} />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <div className="flex items-center mb-4">
+                <img
+                  src={getImageSrc(selectedProduct?.images)}
+                  alt={selectedProduct?.productName}
+                  className="w-16 h-16 rounded-lg object-cover mr-4"
+                  onError={(e) => (e.target.src = 'https://via.placeholder.com/150')}
+                />
+                <div>
+                  <h4 className="font-medium text-gray-900">{selectedProduct?.productName}</h4>
+                  <p className="text-sm text-gray-500">
+                    Giá gốc: {selectedProduct?.price?.toLocaleString()} VND
+                  </p>
+                  {selectedProduct?.discountPercentage > 0 && (
+                    <p className="text-sm text-red-500">
+                      Đang giảm: {selectedProduct?.discountPercentage}%
+                    </p>
+                  )}
                 </div>
               </div>
-              <div className="flex justify-end gap-3 px-7 py-3">
-                <button
-                  onClick={() => {
-                    setShowDiscountModal(false);
-                    setDiscountPercentage('');
-                    setSelectedProduct(null);
-                  }}
-                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
-                >
-                  Hủy
-                </button>
-                <button
-                  onClick={handleApplyDiscount}
-                  className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-                  Áp dụng
-                </button>
+
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Chọn phần trăm giảm giá
+              </label>
+              <div className="grid grid-cols-4 gap-2 mb-4">
+                {[10, 20, 30, 50].map((percent) => (
+                  <button
+                    key={percent}
+                    onClick={() => setDiscountPercentage(percent.toString())}
+                    className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                      discountPercentage === percent.toString()
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {percent}%
+                  </button>
+                ))}
               </div>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={discountPercentage}
+                  onChange={(e) => setDiscountPercentage(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Hoặc nhập phần trăm giảm giá"
+                  min="1"
+                  max="100"
+                />
+                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">%</span>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              {selectedProduct?.discountPercentage > 0 && (
+                <button
+                  onClick={handleRemoveDiscount}
+                  className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
+                >
+                  Xóa giảm giá
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setShowDiscountModal(false);
+                  setDiscountPercentage('');
+                  setSelectedProduct(null);
+                }}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleApplyDiscount}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              >
+                {selectedProduct?.discountPercentage > 0 ? 'Cập nhật' : 'Áp dụng'}
+              </button>
             </div>
           </div>
         </div>

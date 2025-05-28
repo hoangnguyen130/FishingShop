@@ -284,6 +284,7 @@ function AdminCharts() {
         quantity: data.quantity,
         revenue: data.revenue
       }))
+      .filter(product => product.quantity >= 10) // Chỉ lấy sản phẩm bán từ 10 trở lên
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 10); // Lấy top 10 sản phẩm
 
