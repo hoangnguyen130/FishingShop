@@ -198,6 +198,12 @@ function UserPage() {
       setIsChangingPassword(true);
       const token = sessionStorage.getItem('token');
       
+      if (!token) {
+        toast.error('Vui lòng đăng nhập lại');
+        navigate('/sign-in');
+        return;
+      }
+
       const response = await axios.put(
         'http://localhost:3001/v1/auth/change-password',
         {
@@ -222,7 +228,12 @@ function UserPage() {
       }
     } catch (error) {
       console.error('Error changing password:', error);
-      toast.error(error.response?.data?.message || 'Đổi mật khẩu thất bại');
+      if (error.response?.status === 401) {
+        toast.error('Phiên đăng nhập đã hết hạn');
+        navigate('/sign-in');
+      } else {
+        toast.error(error.response?.data?.message || 'Đổi mật khẩu thất bại');
+      }
     } finally {
       setIsChangingPassword(false);
     }

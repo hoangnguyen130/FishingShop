@@ -146,9 +146,9 @@ function Header() {
 
   const navLinks = [
     { path: '/', label: 'Trang chủ', icon: faHome },
-    { path: '/can-cau', label: 'Cần câu', icon: faFish },
-    { path: '/do-cau', label: 'Đồ câu', icon: faTools },
-    { path: '/phu-kien', label: 'Phụ kiện', icon: faBox }
+    { path: '/cancau', label: 'Cần câu', icon: faFish },
+    { path: '/docau', label: 'Đồ câu', icon: faTools },
+    { path: '/phukien', label: 'Phụ kiện', icon: faBox }
   ];
 
   return (
@@ -163,7 +163,7 @@ function Header() {
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-2">
               {/* <img src="/logo.png" alt="Logo" className="h-12 w-auto" /> */}
-              <span className="text-xl font-bold text-white mr-4">Fishing Shop</span>
+              <span className="text-xl items-center justify-center font-bold text-white mr-8">HN Fishing</span>
             </Link>
 
             {/* Navigation links */}

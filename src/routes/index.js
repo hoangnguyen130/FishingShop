@@ -16,7 +16,11 @@ import AdminCharts from "~/components/Layout/AdminCharts"
 import FishingRods from '../pages/FishingRods'
 import FishingGear from '../pages/FishingGear'
 import Accessories from '../pages/Accessories'
+import FishingBait from '../pages/FishingBait'
 import DefaultLayout from "~/components/Layout/DefaultLayout"
+import SearchResults from "~/components/Layout/SearchResults"
+import InventoryManagement from "~/components/Layout/InventoryManagement"
+import ManageDiscountedProducts from '../components/Layout/ManageDiscountedProducts'
 
 
 const publicRoutes = [
@@ -26,18 +30,28 @@ const publicRoutes = [
         layout: DefaultLayout
     },
     { 
-        path: '/can-cau', 
+        path: '/cancau', 
         component: FishingRods,
         layout: DefaultLayout
     },
     { 
-        path: '/do-cau', 
+        path: '/docau', 
         component: FishingGear,
         layout: DefaultLayout
     },
     { 
-        path: '/phu-kien', 
+        path: '/phukien', 
         component: Accessories,
+        layout: DefaultLayout
+    },
+    { 
+        path: '/moicau', 
+        component: FishingBait,
+        layout: DefaultLayout
+    },
+    { 
+        path: '/search', 
+        component: SearchResults,
         layout: DefaultLayout
     },
     { path: '/sign-in', component: SignIn},
@@ -54,6 +68,8 @@ const publicRoutes = [
     { path: '/checkout', component: Checkout},
     { path: '/admin/orders', component: OrdersAdmin},
     { path: '/orders', component: OrdersUser},
+    { path: '/admin/inventory', component: InventoryManagement},
+    { path: '/admin/discounted-products', component: ManageDiscountedProducts },
 ]
 
 const privateRoutes = []

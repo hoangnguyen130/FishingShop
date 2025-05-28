@@ -6,11 +6,13 @@ import { Wrapper as PopperWrapper } from '~/components/Layout/Popper';
 import { useDebounce } from '~/hooks';
 import Tippy from '@tippyjs/react/headless';
 import ProductItem from './ProductItem';
+import { useNavigate } from 'react-router-dom';
 
 function Search() {
   const [searchValue, setSearchValue] = useState('');
   const [searchResult, setSearchResult] = useState([]);
   const [showResult, setShowResult] = useState(false);
+  const navigate = useNavigate();
 
   const debounced = useDebounce(searchValue, 700);
   const inputRef = useRef();
@@ -48,6 +50,13 @@ function Search() {
     setShowResult(false);
   };
 
+  const handleSearch = (e) => {
+    if (e.key === 'Enter' && searchValue.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchValue.trim())}`);
+      setShowResult(false);
+    }
+  };
+
   return (
     <Tippy
       interactive
@@ -77,6 +86,7 @@ function Search() {
           spellCheck={false}
           onChange={(e) => setSearchValue(e.target.value)}
           onFocus={() => setShowResult(true)}
+          onKeyDown={handleSearch}
           aria-label="Tìm kiếm sản phẩm"
         />
         {!!searchValue && (

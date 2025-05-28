@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
@@ -14,7 +14,8 @@ import {
   faTag,
   faInfoCircle,
   faDollarSign,
-  faHashtag
+  faHashtag,
+  faPlus
 } from '@fortawesome/free-solid-svg-icons';
 
 const AddProduct = () => {
@@ -29,7 +30,25 @@ const AddProduct = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [previewUrls, setPreviewUrls] = useState([]);
+  const [customType, setCustomType] = useState('');
+  const [showCustomTypeInput, setShowCustomTypeInput] = useState(false);
+  const [productTypes, setProductTypes] = useState([]);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchProductTypes();
+  }, []);
+
+  const fetchProductTypes = async () => {
+    try {
+      const response = await axios.get('http://localhost:3001/v1/products/types');
+      setProductTypes(response.data.data);
+      console.log(response.data.data);
+    } catch (error) {
+      console.error('Error fetching product types:', error);
+      toast.error('Không thể tải danh sách loại sản phẩm');
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -77,6 +96,43 @@ const AddProduct = () => {
     setPreviewUrls(newUrls);
   };
 
+  const handleAddCustomType = async () => {
+    if (!customType.trim()) {
+      toast.error('Vui lòng nhập tên loại sản phẩm mới');
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        'http://localhost:3001/v1/products/types',
+        { 
+          typeName: customType.trim(),
+          description: `Mô tả cho loại sản phẩm ${customType.trim()}`
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
+          },
+        }
+      );
+
+      // Refresh the product types list
+      await fetchProductTypes();
+      
+      // Set the newly added type as selected
+      setFormData(prev => ({
+        ...prev,
+        type: customType.trim()
+      }));
+      
+      setCustomType('');
+      setShowCustomTypeInput(false);
+      toast.success('Đã thêm loại sản phẩm mới');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Lỗi khi thêm loại sản phẩm mới');
+    }
+  };
+
   const validateForm = () => {
     const trimmedData = {
       productName: formData.productName.trim(),
@@ -93,10 +149,7 @@ const AddProduct = () => {
       return 'Vui lòng nhập mô tả';
     }
     if (!trimmedData.type) {
-      return 'Vui lòng chọn loại sản phẩm';
-    }
-    if (!['cần câu', 'đồ câu', 'phụ kiện', 'mồi câu'].includes(trimmedData.type)) {
-      return 'Loại sản phẩm phải là "cần câu", "đồ câu", "mồi câu" hoặc "phụ kiện"';
+      return 'Vui lòng chọn hoặc nhập loại sản phẩm';
     }
     if (!trimmedData.price || Number(trimmedData.price) <= 0) {
       return 'Giá phải lớn hơn 0';
@@ -249,20 +302,61 @@ const AddProduct = () => {
                   <FontAwesomeIcon icon={faTag} className="text-blue-500" />
                   Loại sản phẩm
                 </label>
-                <select
-                  id="type"
-                  name="type"
-                  value={formData.type}
-                  onChange={handleInputChange}
-                  className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  aria-required="true"
-                >
-                  <option value="" disabled>Chọn loại sản phẩm</option>
-                  <option value="cần câu">Cần câu</option>
-                  <option value="đồ câu">Đồ câu</option>
-                  <option value="phụ kiện">Phụ kiện</option>
-                  <option value="mồi câu">Mồi câu</option>
-                </select>
+                <div className="space-y-2">
+                  <select
+                    id="type"
+                    name="type"
+                    value={formData.type}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    aria-required="true"
+                  >
+                    <option value="">Chọn loại sản phẩm</option>
+                    {productTypes.map((type) => (
+                      <option key={type._id} value={type.typeName}>
+                        {type.typeName}
+                      </option>
+                    ))}
+                  </select>
+                  
+                  {!showCustomTypeInput ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomTypeInput(true)}
+                      className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm"
+                    >
+                      <FontAwesomeIcon icon={faPlus} />
+                      <span>Thêm loại sản phẩm mới</span>
+                    </button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={customType}
+                        onChange={(e) => setCustomType(e.target.value)}
+                        placeholder="Nhập tên loại sản phẩm mới"
+                        className="flex-1 p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddCustomType}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Thêm
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCustomTypeInput(false);
+                          setCustomType('');
+                        }}
+                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                      >
+                        Hủy
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Price and Quantity */}

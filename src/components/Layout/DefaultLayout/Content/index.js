@@ -4,13 +4,129 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faShoppingCart, faBars } from '@fortawesome/free-solid-svg-icons';
+import Slider from 'react-slick';
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
 import ChatContainer from '../../ChatContainer';
+
+const BannerSlider = () => {
+  const settings = {
+    dots: true,
+    infinite: true,
+    speed: 1000,
+    slidesToShow: 1,
+    slidesToScroll: 1,
+    autoplay: true,
+    autoplaySpeed: 3000,
+    arrows: true,
+    pauseOnHover: true,
+    fade: true,
+    cssEase: 'linear',
+    responsive: [
+      {
+        breakpoint: 768,
+        settings: {
+          arrows: false,
+          dots: true
+        }
+      }
+    ]
+  };
+
+  const banners = [
+    {
+      id: 1,
+      image: 'https://images.unsplash.com/photo-1601758124510-52d02ddb7cbd?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80',
+      title: 'Cần câu chính hãng',
+      description: 'Khám phá bộ sưu tập cần câu chất lượng cao',
+      buttonText: 'Xem ngay',
+      buttonLink: '/cancau'
+    },
+    {
+      id: 2,
+      image: 'https://images.unsplash.com/photo-1599583097688-0c4c0c0c0c0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80',
+      title: 'Phụ kiện câu cá',
+      description: 'Đầy đủ phụ kiện cho người đam mê câu cá',
+      buttonText: 'Mua ngay',
+      buttonLink: '/phukien'
+    },
+    {
+      id: 3,
+      image: 'https://images.unsplash.com/photo-1599583097688-0c4c0c0c0c0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80',
+      title: 'Mồi câu đặc biệt',
+      description: 'Các loại mồi câu chất lượng cao',
+      buttonText: 'Khám phá',
+      buttonLink: '/moicau'
+    }
+  ];
+
+  return (
+    <div className="mb-12">
+      <Slider {...settings}>
+        {banners.map((banner) => (
+          <div key={banner.id} className="relative">
+            <div className="relative h-[500px] w-full overflow-hidden">
+              <img
+                src={banner.image}
+                alt={banner.title}
+                className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-700"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-black/40 flex items-center">
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="max-w-2xl text-white">
+                    <h2 className="text-4xl sm:text-5xl font-bold mb-4 animate-fade-in">
+                      {banner.title}
+                    </h2>
+                    <p className="text-xl sm:text-2xl mb-8 text-gray-200 animate-fade-in-delay">
+                      {banner.description}
+                    </p>
+                    <a
+                      href={banner.buttonLink}
+                      className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-full transition-colors duration-300 transform hover:scale-105 animate-fade-in-delay-2"
+                    >
+                      {banner.buttonText}
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </Slider>
+    </div>
+  );
+};
 
 const ProductCard = ({ product, onProductClick, onAddToCart }) => {
   const getImageSrc = (images) => {
     if (Array.isArray(images) && images.length > 0) return images[0];
     if (typeof images === 'string') return images;
     return 'https://via.placeholder.com/150';
+  };
+
+  const displayPrice = () => {
+    if (product.discountPercentage) {
+      return (
+        <div className="flex items-center gap-2">
+          <div className="flex flex-col">
+            <span className="text-lg font-bold text-red-500">
+              {product.discountedPrice.toLocaleString()} VND
+            </span>
+            <span className="text-sm text-gray-500 line-through">
+              {product.price.toLocaleString()} VND
+            </span>
+          </div>
+          <span className="text-sm font-bold text-white bg-red-500 px-2 py-1 rounded">
+            -{product.discountPercentage}%
+          </span>
+        </div>
+      );
+    }
+    return (
+      <p className="text-xl font-bold text-blue-500">
+        {product.price.toLocaleString()} VND
+      </p>
+    );
   };
 
   return (
@@ -34,7 +150,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
         {product.productName}
       </h3>
       <div className="flex items-center justify-between">
-        <p className="text-xl font-bold text-blue-500">{product.price.toLocaleString()} VND</p>
+        {displayPrice()}
         <button
           onClick={() => onAddToCart(product._id)}
           className="text-black hover:text-red-600 transition duration-300"
@@ -49,25 +165,58 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
 };
 
 const ProductSection = ({ title, products, id, onProductClick, onAddToCart }) => {
+  const navigate = useNavigate();
   // Limit to 12 products
   const limitedProducts = products.slice(0, 12);
   
+  const handleViewMore = () => {
+    // Convert Vietnamese text to kebab-case
+    const kebabId = id
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+      .replace(/([a-z])([A-Z])/g, '$1-$2') // Add hyphen between camelCase
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .toLowerCase(); // Convert to lowercase
+    navigate(`/${kebabId}`);
+  };
+  
   return (
-    <div id={id} className="mb-8">
-      <h2 className="text-3xl font-semibold text-gray-800 mb-6">{title}</h2>
+    <div id={id} className="mb-8 relative group">
+      <div className="flex items-center gap-4 mb-6">
+        <h2 className="text-3xl font-semibold text-gray-800">{title}</h2>
+        <button
+          onClick={handleViewMore}
+          className="text-xl text-blue-500 opacity-0 -translate-x-1/2 transition-all duration-500 group-hover:opacity-100 group-hover:translate-x-0 flex items-center gap-1"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+          </svg>
+          Xem thêm
+        </button>
+      </div>
       {limitedProducts.length === 0 ? (
         <div className="text-center text-gray-600">Không có sản phẩm nào.</div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {limitedProducts.map((product) => (
-            <ProductCard
-              key={product._id}
-              product={product}
-              onProductClick={onProductClick}
-              onAddToCart={onAddToCart}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {limitedProducts.map((product) => (
+              <ProductCard
+                key={product._id}
+                product={product}
+                onProductClick={onProductClick}
+                onAddToCart={onAddToCart}
+              />
+            ))}
+          </div>
+          <div className="flex justify-center mt-8">
+            <button
+              onClick={handleViewMore}
+              className="text-xl text-blue-500 hover:text-blue-600 transition-colors duration-300 flex items-center gap-2"
+            >
+              Xem thêm
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
@@ -108,18 +257,76 @@ const MenuItems = [
 ];
 
 function Content() {
-  const [products, setProducts] = useState({
-    canCau: [],
-    doCau: [],
-    phuKien: [],
-    moiCau: [],
-  });
+  const [products, setProducts] = useState({});
+  const [productTypes, setProductTypes] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
-  const [selectedType, setSelectedType] = useState('all');
+  const [selectedDiscount, setSelectedDiscount] = useState('all');
   const navigate = useNavigate();
+
+  const capitalizeFirstLetter = (string) => {
+    if (!string) return '';
+    return string.charAt(0).toUpperCase() + string.slice(1);
+  };
+
+  useEffect(() => {
+    fetchProductTypes();
+    fetchProducts();
+  }, []);
+
+  const fetchProductTypes = async () => {
+    try {
+      const response = await axios.get('http://localhost:3001/v1/products/types');
+      setProductTypes(response.data.data);
+    } catch (error) {
+      console.error('Error fetching product types:', error);
+      toast.error('Không thể tải danh sách loại sản phẩm');
+    }
+  };
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await axios.get('http://localhost:3001/v1/products/get');
+
+      if (!Array.isArray(response.data)) {
+        throw new Error('Dữ liệu sản phẩm không hợp lệ!');
+      }
+
+      // Sort products: discounted items first, then by creation date
+      const sortedProducts = [...response.data].sort((a, b) => {
+        // First sort by discount (products with discount come first)
+        if (a.discountPercentage && !b.discountPercentage) return -1;
+        if (!a.discountPercentage && b.discountPercentage) return 1;
+        
+        // If both have discount or both don't have discount, sort by creation date
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+
+      // Group products by type
+      const groupedProducts = {};
+      sortedProducts.forEach(product => {
+        if (!groupedProducts[product.type]) {
+          groupedProducts[product.type] = [];
+        }
+        groupedProducts[product.type].push(product);
+      });
+
+      setProducts(groupedProducts);
+
+      if (Object.keys(groupedProducts).length === 0) {
+        setError('Không có sản phẩm nào để hiển thị.');
+        toast.warn('Không có sản phẩm nào để hiển thị.');
+      }
+    } catch (err) {
+      handleApiError(err, 'Lỗi khi lấy danh sách sản phẩm. Vui lòng thử lại!');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleApiError = (err, defaultMessage, navigateToSignIn = false) => {
     let errorMessage = defaultMessage;
@@ -138,43 +345,6 @@ function Content() {
     toast.error(errorMessage);
     return errorMessage;
   };
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const response = await axios.get('http://localhost:3001/v1/products/get');
-
-        if (!Array.isArray(response.data)) {
-          throw new Error('Dữ liệu sản phẩm không hợp lệ!');
-        }
-
-        // Sắp xếp sản phẩm theo ngày tạo mới nhất
-        const sortedProducts = [...response.data].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-        const categorizedProducts = {
-          canCau: sortedProducts.filter((product) => product.type === 'cần câu'),
-          doCau: sortedProducts.filter((product) => product.type === 'đồ câu'),
-          phuKien: sortedProducts.filter((product) => product.type === 'phụ kiện'),
-          moiCau: sortedProducts.filter((product) => product.type === 'mồi câu'),
-        };
-
-        setProducts(categorizedProducts);
-
-        if (Object.values(categorizedProducts).every((category) => category.length === 0)) {
-          setError('Không có sản phẩm nào để hiển thị.');
-          toast.warn('Không có sản phẩm nào để hiển thị.');
-        }
-      } catch (err) {
-        handleApiError(err, 'Lỗi khi lấy danh sách sản phẩm. Vui lòng thử lại!');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, []);
 
   const handleProductClick = (id) => {
     navigate(`/products/${id}`);
@@ -211,9 +381,31 @@ function Content() {
         return false;
       }
 
-      // Filter by type
-      if (selectedType !== 'all' && product.type !== selectedType) {
-        return false;
+      // Filter by discount percentage
+      if (selectedDiscount !== 'all') {
+        const discount = product.discountPercentage || 0;
+        switch (selectedDiscount) {
+          case '10-20':
+            if (discount < 10 || discount > 20) return false;
+            break;
+          case '20-30':
+            if (discount < 20 || discount > 30) return false;
+            break;
+          case '30-50':
+            if (discount < 30 || discount > 50) return false;
+            break;
+          case '50+':
+            if (discount < 50) return false;
+            break;
+          case 'discounted':
+            if (!discount) return false;
+            break;
+          case 'no-discount':
+            if (discount) return false;
+            break;
+          default:
+            return true;
+        }
       }
 
       return true;
@@ -228,13 +420,13 @@ function Content() {
     }));
   };
 
-  const handleTypeChange = (e) => {
-    setSelectedType(e.target.value);
+  const handleDiscountChange = (e) => {
+    setSelectedDiscount(e.target.value);
   };
 
   const resetFilters = () => {
     setPriceRange({ min: '', max: '' });
-    setSelectedType('all');
+    setSelectedDiscount('all');
   };
 
   return (
@@ -283,19 +475,21 @@ function Content() {
                 </div>
               </div>
 
-              {/* Type Filter */}
+              {/* Discount Filter */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Loại sản phẩm</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Phần trăm giảm giá</label>
                 <select
-                  value={selectedType}
-                  onChange={handleTypeChange}
+                  value={selectedDiscount}
+                  onChange={handleDiscountChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="all">Tất cả</option>
-                  <option value="cần câu">Cần câu</option>
-                  <option value="đồ câu">Đồ câu</option>
-                  <option value="phụ kiện">Phụ kiện</option>
-                  <option value="mồi câu">Mồi câu</option>
+                  <option value="all">Tất cả sản phẩm</option>
+                  <option value="discounted">Có giảm giá</option>
+                  <option value="no-discount">Không giảm giá</option>
+                  <option value="10-20">Giảm 10% - 20%</option>
+                  <option value="20-30">Giảm 20% - 30%</option>
+                  <option value="30-50">Giảm 30% - 50%</option>
+                  <option value="50+">Giảm trên 50%</option>
                 </select>
               </div>
 
@@ -322,34 +516,17 @@ function Content() {
             <LoadingSpinner />
           ) : (
             <>
-              <ProductSection
-                title="Cần câu chính hãng"
-                products={filterProducts(products.canCau)}
-                id="cancau"
-                onProductClick={handleProductClick}
-                onAddToCart={handleAddToCart}
-              />
-              <ProductSection
-                title="Đồ câu cá"
-                products={filterProducts(products.doCau)}
-                id="docau"
-                onProductClick={handleProductClick}
-                onAddToCart={handleAddToCart}
-              />
-              <ProductSection
-                title="Phụ kiện"
-                products={filterProducts(products.phuKien)}
-                id="phukien"
-                onProductClick={handleProductClick}
-                onAddToCart={handleAddToCart}
-              />
-              <ProductSection
-                title="Mồi câu"
-                products={filterProducts(products.moiCau)}
-                id="moicau"
-                onProductClick={handleProductClick}
-                onAddToCart={handleAddToCart}
-              />
+              <BannerSlider />
+              {productTypes.map((type) => (
+                <ProductSection
+                  key={type._id}
+                  title={capitalizeFirstLetter(type.typeName)}
+                  products={filterProducts(products[type.typeName] || [])}
+                  id={type.typeName.toLowerCase().replace(/\s+/g, '')}
+                  onProductClick={handleProductClick}
+                  onAddToCart={handleAddToCart}
+                />
+              ))}
             </>
           )}
         </div>

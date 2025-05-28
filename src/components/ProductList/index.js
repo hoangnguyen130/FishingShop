@@ -13,6 +13,31 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
     return 'https://via.placeholder.com/150';
   };
 
+  const displayPrice = () => {
+    if (product.discountPercentage) {
+      return (
+        <div className="flex items-center gap-2">
+          <div className="flex flex-col">
+            <span className="text-lg font-bold text-red-500">
+              {product.discountedPrice.toLocaleString()} VND
+            </span>
+            <span className="text-sm text-gray-500 line-through">
+              {product.price.toLocaleString()} VND
+            </span>
+          </div>
+          <span className="text-sm font-bold text-white bg-red-500 px-2 py-1 rounded">
+            -{product.discountPercentage}%
+          </span>
+        </div>
+      );
+    }
+    return (
+      <p className="text-xl font-bold text-blue-500">
+        {product.price.toLocaleString()} VND
+      </p>
+    );
+  };
+
   return (
     <div
       className="bg-white p-6 rounded-lg shadow-xl hover:scale-105 transform transition duration-300 hover:shadow-2xl cursor-pointer"
@@ -34,7 +59,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart }) => {
         {product.productName}
       </h3>
       <div className="flex items-center justify-between">
-        <p className="text-xl font-bold text-blue-500">{product.price.toLocaleString()} VND</p>
+        {displayPrice()}
         <button
           onClick={() => onAddToCart(product._id)}
           className="text-black hover:text-red-600 transition duration-300"

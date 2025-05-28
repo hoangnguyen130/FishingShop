@@ -10,7 +10,9 @@ import {
   faChartLine,
   faPlus,
   faStore,
-  faClipboardList
+  faClipboardList,
+  faBoxesStacked,
+  faTags
 } from '@fortawesome/free-solid-svg-icons';
 
 const AdminDashboard = () => {
@@ -126,6 +128,20 @@ const AdminDashboard = () => {
             </div>
           </Link>
 
+          {/* Quản lý sản phẩm giảm giá */}
+          <Link to="/admin/discounted-products" className="transform hover:scale-105 transition duration-300">
+            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-pink-100 rounded-lg">
+                  <FontAwesomeIcon icon={faTags} className="text-2xl text-pink-600" />
+                </div>
+                <span className="text-sm text-gray-500">Sản phẩm giảm giá</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Quản lý sản phẩm giảm giá</h3>
+              <p className="text-gray-600">Xem, chỉnh sửa các sản phẩm đang giảm giá</p>
+            </div>
+          </Link>
+
           {/* Đơn hàng */}
           <Link to="/admin/orders" className="transform hover:scale-105 transition duration-300">
             <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300">
@@ -151,6 +167,20 @@ const AdminDashboard = () => {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Thống kê</h3>
               <p className="text-gray-600">Xem báo cáo và phân tích doanh số</p>
+            </div>
+          </Link>
+
+          {/* Hàng tồn kho */}
+          <Link to="/admin/inventory" className="transform hover:scale-105 transition duration-300">
+            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-red-100 rounded-lg">
+                  <FontAwesomeIcon icon={faBoxesStacked} className="text-2xl text-red-600" />
+                </div>
+                <span className="text-sm text-gray-500">Quản lý tồn kho</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Hàng tồn kho</h3>
+              <p className="text-gray-600">Xem sản phẩm bán chậm và tồn kho</p>
             </div>
           </Link>
         </div>
