@@ -43,6 +43,7 @@ function Cart() {
           },
         });
         setCart(response.data.items || []);
+        console.log(response.data.items);
       } catch (err) {
         let errorMessage = 'Lỗi khi lấy giỏ hàng';
         if (err.response?.data?.message) {
@@ -130,6 +131,7 @@ function Cart() {
         },
       });
       setCart(cartResponse.data.items);
+      console.log(cartResponse.data.items);
     } catch (err) {
       let errorMessage = 'Lỗi khi xóa sản phẩm';
       if (err.response?.data?.message) {
@@ -188,7 +190,10 @@ function Cart() {
     );
   }
 
-  const totalAmount = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const totalAmount = cart.reduce((sum, item) => {
+    if (!item) return sum;
+    return sum + (item.discountedPrice || item.originalPrice) * (item.quantity || 0);
+  }, 0);
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20 pb-12">
@@ -242,7 +247,23 @@ function Cart() {
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">{item.productName}</h3>
                       <div className="flex items-center gap-4 mb-2">
                         <span className="text-gray-600">Giá:</span>
-                        <span className="text-blue-600 font-semibold">{item.price.toLocaleString()} VND</span>
+                        {item.discountPercentage > 0 ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-400 line-through">
+                              {item.originalPrice?.toLocaleString('vi-VN')} VND
+                            </span>
+                            <span className="text-red-600 font-semibold">
+                              {item.discountedPrice?.toLocaleString('vi-VN')} VND
+                            </span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                              -{item.discountPercentage}%
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-blue-600 font-semibold">
+                            {item.originalPrice?.toLocaleString('vi-VN')} VND
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-4">
                         <span className="text-gray-600">Số lượng:</span>
@@ -276,7 +297,20 @@ function Cart() {
                     </div>
                     <div className="flex flex-col items-end gap-2">
                       <div className="text-lg font-semibold text-gray-900">
-                        {(item.price * item.quantity).toLocaleString()} VND
+                        {item.discountPercentage > 0 ? (
+                          <div className="flex flex-col items-end">
+                            <span className="text-red-600">
+                              {(item.discountedPrice * (item.quantity || 0)).toLocaleString('vi-VN')} VND
+                            </span>
+                            <span className="text-sm text-gray-400 line-through">
+                              {(item.originalPrice * (item.quantity || 0)).toLocaleString('vi-VN')} VND
+                            </span>
+                          </div>
+                        ) : (
+                          <span>
+                            {(item.originalPrice * (item.quantity || 0)).toLocaleString('vi-VN')} VND
+                          </span>
+                        )}
                       </div>
                       <button
                         onClick={() => handleRemoveItem(item.productId)}
@@ -291,7 +325,9 @@ function Cart() {
                 <div className="border-t border-gray-200 pt-6">
                   <div className="flex justify-between items-center mb-6">
                     <div className="text-xl font-semibold text-gray-900">Tổng cộng:</div>
-                    <div className="text-2xl font-bold text-blue-600">{totalAmount.toLocaleString()} VND</div>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {typeof totalAmount === 'number' ? totalAmount.toLocaleString('vi-VN') : '0'} VND
+                    </div>
                   </div>
                   <div className="flex justify-end gap-4">
                     <button

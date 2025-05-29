@@ -177,6 +177,7 @@ const ProductSection = ({ title, products, id, onProductClick, onAddToCart }) =>
     const kebabId = id
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+      .replace(/đ/g, 'd') // Replace đ with d
       .replace(/([a-z])([A-Z])/g, '$1-$2') // Add hyphen between camelCase
       .replace(/\s+/g, '-') // Replace spaces with hyphens
       .toLowerCase(); // Convert to lowercase

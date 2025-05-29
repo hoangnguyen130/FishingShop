@@ -116,37 +116,93 @@ function AdminCharts() {
     let labels = [];
     let data = [];
 
-    if (timeRange === 'week') {
-      // Thống kê theo ngày trong tuần
-      labels = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-      data = Array(7).fill(0);
+    // Xác định khoảng thời gian
+    const start = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = endDate ? new Date(endDate) : now;
+    const diffTime = Math.abs(end - start);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays > 365) {
+      // Thống kê theo năm
+      const years = [];
+      const yearData = {};
       
       filteredOrders.forEach(order => {
         const orderDate = new Date(order.createdAt);
-        const dayOfWeek = orderDate.getDay();
-        data[dayOfWeek] += order.total;
+        const year = orderDate.getFullYear();
+        if (!years.includes(year)) {
+          years.push(year);
+          yearData[year] = 0;
+        }
+        yearData[year] += order.total;
       });
-    } else if (timeRange === 'month') {
-      // Thống kê theo ngày trong tháng
-      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      labels = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-      data = Array(daysInMonth).fill(0);
+
+      labels = years.sort();
+      data = labels.map(year => yearData[year]);
+    } else if (diffDays > 31) {
+      // Thống kê theo tháng
+      const months = [];
+      const monthData = {};
       
       filteredOrders.forEach(order => {
         const orderDate = new Date(order.createdAt);
-        const dayOfMonth = orderDate.getDate() - 1;
-        data[dayOfMonth] += order.total;
+        const monthKey = `${orderDate.getFullYear()}-${orderDate.getMonth() + 1}`;
+        if (!months.includes(monthKey)) {
+          months.push(monthKey);
+          monthData[monthKey] = 0;
+        }
+        monthData[monthKey] += order.total;
       });
-    } else if (timeRange === 'year') {
-      // Thống kê theo tháng trong năm
-      labels = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'];
-      data = Array(12).fill(0);
+
+      labels = months.sort().map(monthKey => {
+        const [year, monthNum] = monthKey.split('-');
+        return `T${monthNum}/${year}`;
+      });
+      data = months.sort().map(month => monthData[month]);
+    } else if (diffDays > 7) {
+      // Thống kê theo tuần
+      const weeks = [];
+      const weekData = {};
       
       filteredOrders.forEach(order => {
         const orderDate = new Date(order.createdAt);
-        const month = orderDate.getMonth();
-        data[month] += order.total;
+        const weekStart = new Date(orderDate);
+        weekStart.setDate(orderDate.getDate() - orderDate.getDay());
+        const weekKey = weekStart.toISOString().split('T')[0];
+        
+        if (!weeks.includes(weekKey)) {
+          weeks.push(weekKey);
+          weekData[weekKey] = 0;
+        }
+        weekData[weekKey] += order.total;
       });
+
+      labels = weeks.sort().map(week => {
+        const date = new Date(week);
+        return `Tuần ${date.getDate()}/${date.getMonth() + 1}`;
+      });
+      data = weeks.sort().map(week => weekData[week]);
+    } else {
+      // Thống kê theo ngày
+      const days = [];
+      const dayData = {};
+      
+      filteredOrders.forEach(order => {
+        const orderDate = new Date(order.createdAt);
+        const dayKey = orderDate.toISOString().split('T')[0];
+        
+        if (!days.includes(dayKey)) {
+          days.push(dayKey);
+          dayData[dayKey] = 0;
+        }
+        dayData[dayKey] += order.total;
+      });
+
+      labels = days.sort().map(day => {
+        const date = new Date(day);
+        return `${date.getDate()}/${date.getMonth() + 1}`;
+      });
+      data = days.sort().map(day => dayData[day]);
     }
 
     return { labels, data };
@@ -159,34 +215,93 @@ function AdminCharts() {
     let labels = [];
     let data = [];
 
-    if (timeRange === 'week') {
-      labels = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-      data = Array(7).fill(0);
+    // Xác định khoảng thời gian
+    const start = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = endDate ? new Date(endDate) : now;
+    const diffTime = Math.abs(end - start);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays > 365) {
+      // Thống kê theo năm
+      const years = [];
+      const yearData = {};
       
       filteredOrders.forEach(order => {
         const orderDate = new Date(order.createdAt);
-        const dayOfWeek = orderDate.getDay();
-        data[dayOfWeek]++;
+        const year = orderDate.getFullYear();
+        if (!years.includes(year)) {
+          years.push(year);
+          yearData[year] = 0;
+        }
+        yearData[year]++;
       });
-    } else if (timeRange === 'month') {
-      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      labels = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-      data = Array(daysInMonth).fill(0);
+
+      labels = years.sort();
+      data = labels.map(year => yearData[year]);
+    } else if (diffDays > 31) {
+      // Thống kê theo tháng
+      const months = [];
+      const monthData = {};
       
       filteredOrders.forEach(order => {
         const orderDate = new Date(order.createdAt);
-        const dayOfMonth = orderDate.getDate() - 1;
-        data[dayOfMonth]++;
+        const monthKey = `${orderDate.getFullYear()}-${orderDate.getMonth() + 1}`;
+        if (!months.includes(monthKey)) {
+          months.push(monthKey);
+          monthData[monthKey] = 0;
+        }
+        monthData[monthKey]++;
       });
-    } else if (timeRange === 'year') {
-      labels = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'];
-      data = Array(12).fill(0);
+
+      labels = months.sort().map(monthKey => {
+        const [year, monthNum] = monthKey.split('-');
+        return `T${monthNum}/${year}`;
+      });
+      data = months.sort().map(month => monthData[month]);
+    } else if (diffDays > 7) {
+      // Thống kê theo tuần
+      const weeks = [];
+      const weekData = {};
       
       filteredOrders.forEach(order => {
         const orderDate = new Date(order.createdAt);
-        const month = orderDate.getMonth();
-        data[month]++;
+        const weekStart = new Date(orderDate);
+        weekStart.setDate(orderDate.getDate() - orderDate.getDay());
+        const weekKey = weekStart.toISOString().split('T')[0];
+        
+        if (!weeks.includes(weekKey)) {
+          weeks.push(weekKey);
+          weekData[weekKey] = 0;
+        }
+        weekData[weekKey]++;
       });
+
+      labels = weeks.sort().map(week => {
+        const date = new Date(week);
+        return `Tuần ${date.getDate()}/${date.getMonth() + 1}`;
+      });
+      data = weeks.sort().map(week => weekData[week]);
+    } else {
+      // Thống kê theo ngày
+      const days = [];
+      const dayData = {};
+      
+      filteredOrders.forEach(order => {
+        const orderDate = new Date(order.createdAt);
+        const dayKey = orderDate.toISOString().split('T')[0];
+        
+        if (!days.includes(dayKey)) {
+          days.push(dayKey);
+          dayData[dayKey] = 0;
+        }
+        dayData[dayKey]++;
+      });
+
+      labels = days.sort().map(day => {
+        const date = new Date(day);
+        return `${date.getDate()}/${date.getMonth() + 1}`;
+      });
+      data = days.sort().map(day => dayData[day]);
     }
 
     return { labels, data };
@@ -199,40 +314,101 @@ function AdminCharts() {
     let labels = [];
     let data = [];
 
-    if (timeRange === 'week') {
-      labels = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-      data = Array(7).fill(0);
+    // Xác định khoảng thời gian
+    const start = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = endDate ? new Date(endDate) : now;
+    const diffTime = Math.abs(end - start);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays > 365) {
+      // Thống kê theo năm
+      const years = [];
+      const yearData = {};
       
       filteredOrders.forEach(order => {
         const orderDate = new Date(order.createdAt);
-        const dayOfWeek = orderDate.getDay();
+        const year = orderDate.getFullYear();
+        if (!years.includes(year)) {
+          years.push(year);
+          yearData[year] = 0;
+        }
         order.items.forEach(item => {
-          data[dayOfWeek] += item.quantity;
+          yearData[year] += item.quantity;
         });
       });
-    } else if (timeRange === 'month') {
-      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      labels = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-      data = Array(daysInMonth).fill(0);
+
+      labels = years.sort();
+      data = labels.map(year => yearData[year]);
+    } else if (diffDays > 31) {
+      // Thống kê theo tháng
+      const months = [];
+      const monthData = {};
       
       filteredOrders.forEach(order => {
         const orderDate = new Date(order.createdAt);
-        const dayOfMonth = orderDate.getDate() - 1;
+        const monthKey = `${orderDate.getFullYear()}-${orderDate.getMonth() + 1}`;
+        if (!months.includes(monthKey)) {
+          months.push(monthKey);
+          monthData[monthKey] = 0;
+        }
         order.items.forEach(item => {
-          data[dayOfMonth] += item.quantity;
+          monthData[monthKey] += item.quantity;
         });
       });
-    } else if (timeRange === 'year') {
-      labels = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'];
-      data = Array(12).fill(0);
+
+      labels = months.sort().map(monthKey => {
+        const [year, monthNum] = monthKey.split('-');
+        return `T${monthNum}/${year}`;
+      });
+      data = months.sort().map(month => monthData[month]);
+    } else if (diffDays > 7) {
+      // Thống kê theo tuần
+      const weeks = [];
+      const weekData = {};
       
       filteredOrders.forEach(order => {
         const orderDate = new Date(order.createdAt);
-        const month = orderDate.getMonth();
+        const weekStart = new Date(orderDate);
+        weekStart.setDate(orderDate.getDate() - orderDate.getDay());
+        const weekKey = weekStart.toISOString().split('T')[0];
+        
+        if (!weeks.includes(weekKey)) {
+          weeks.push(weekKey);
+          weekData[weekKey] = 0;
+        }
         order.items.forEach(item => {
-          data[month] += item.quantity;
+          weekData[weekKey] += item.quantity;
         });
       });
+
+      labels = weeks.sort().map(week => {
+        const date = new Date(week);
+        return `Tuần ${date.getDate()}/${date.getMonth() + 1}`;
+      });
+      data = weeks.sort().map(week => weekData[week]);
+    } else {
+      // Thống kê theo ngày
+      const days = [];
+      const dayData = {};
+      
+      filteredOrders.forEach(order => {
+        const orderDate = new Date(order.createdAt);
+        const dayKey = orderDate.toISOString().split('T')[0];
+        
+        if (!days.includes(dayKey)) {
+          days.push(dayKey);
+          dayData[dayKey] = 0;
+        }
+        order.items.forEach(item => {
+          dayData[dayKey] += item.quantity;
+        });
+      });
+
+      labels = days.sort().map(day => {
+        const date = new Date(day);
+        return `${date.getDate()}/${date.getMonth() + 1}`;
+      });
+      data = days.sort().map(day => dayData[day]);
     }
 
     return { labels, data };
@@ -460,7 +636,7 @@ function AdminCharts() {
                     </div>
                   </div>
                 </div>
-                <div>
+                {/* <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Khoảng thời gian
                   </label>
@@ -473,7 +649,7 @@ function AdminCharts() {
                     <option value="month">Tháng</option>
                     <option value="year">Năm</option>
                   </select>
-                </div>
+                </div> */}
                 <button
                   onClick={handleResetFilters}
                   className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition duration-300 flex items-center gap-2"

@@ -157,7 +157,7 @@ function Checkout() {
         if (!Number.isInteger(item.quantity) || item.quantity < 1) {
           errors[`item_${index}_quantity`] = `Sản phẩm ${item.productName || index + 1} có số lượng không hợp lệ`;
         }
-        if (typeof item.price !== 'number' || item.price <= 0) {
+        if (typeof item.originalPrice !== 'number' || item.originalPrice <= 0) {
           errors[`item_${index}_price`] = `Sản phẩm ${item.productName || index + 1} có giá không hợp lệ`;
         }
       });
@@ -186,10 +186,13 @@ function Checkout() {
           productId: item.productId,
           quantity: item.quantity,
           productName: item.productName || '',
-          price: item.price,
+          originalPrice: item.originalPrice,
+          discountPercentage: item.discountPercentage || 0,
+          discountedPrice: item.discountedPrice || item.originalPrice,
           image: item.image || '',
         })),
-        total: cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+        total: cart.items.reduce((sum, item) => 
+          sum + (item.discountedPrice || item.originalPrice) * item.quantity, 0),
         fullName: formData.fullName.trim(),
         phone: formData.phone.trim(),
         address: formData.address.trim(),
@@ -212,7 +215,7 @@ function Checkout() {
 
       // Xóa giỏ hàng sau khi tạo đơn hàng thành công
       try {
-        await axios.delete('http://localhost:3001/v1/products/cart', {
+        await axios.delete('http://localhost:3001/v1/products/cart/clear', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -250,8 +253,6 @@ function Checkout() {
       setError(errorMessage);
       toast.error(errorMessage);
     }
-
-    setFormErrors({});
   };
 
   const handleBack = () => {
@@ -273,7 +274,15 @@ function Checkout() {
     );
   }
 
-  const totalAmount = cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const calculateTotal = () => {
+    return cart.items.reduce((sum, item) => 
+      sum + (item.discountedPrice || item.originalPrice) * item.quantity, 0);
+  };
+
+  const calculateOriginalTotal = () => {
+    return cart.items.reduce((sum, item) => 
+      sum + item.originalPrice * item.quantity, 0);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20 pb-12">
@@ -424,11 +433,35 @@ function Checkout() {
                           <div className="flex-1">
                             <h3 className="font-medium text-gray-900">{item.productName}</h3>
                             <div className="text-sm text-gray-500">
-                              {item.price.toLocaleString()} VND x {item.quantity}
+                              {item.discountPercentage > 0 ? (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-red-600 font-semibold">
+                                    {(item.discountedPrice * item.quantity).toLocaleString('vi-VN')} VND
+                                  </span>
+                                  <span className="text-sm text-gray-400 line-through">
+                                    {(item.originalPrice * item.quantity).toLocaleString('vi-VN')} VND
+                                  </span>
+                                  <span className="text-sm font-bold text-white bg-red-500 px-2 py-0.5 rounded">
+                                    -{item.discountPercentage}%
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-gray-900 font-semibold">
+                                  {(item.originalPrice * item.quantity).toLocaleString('vi-VN')} VND
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div className="font-semibold text-gray-900">
-                            {(item.price * item.quantity).toLocaleString()} VND
+                            {item.discountPercentage > 0 ? (
+                              <span className="text-red-600">
+                                {(item.discountedPrice * item.quantity).toLocaleString('vi-VN')} VND
+                              </span>
+                            ) : (
+                              <span>
+                                {(item.originalPrice * item.quantity).toLocaleString('vi-VN')} VND
+                              </span>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -436,15 +469,17 @@ function Checkout() {
                       <div className="border-t border-gray-200 pt-4 mt-4">
                         <div className="flex justify-between items-center mb-2">
                           <span className="text-gray-600">Tạm tính:</span>
-                          <span className="text-gray-900">{totalAmount.toLocaleString()} VND</span>
+                          <span className="text-gray-900">{calculateOriginalTotal().toLocaleString('vi-VN')} VND</span>
                         </div>
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-gray-600">Phí vận chuyển:</span>
-                          <span className="text-gray-900">Miễn phí</span>
-                        </div>
+                        {cart.items.some(item => item.discountPercentage > 0) && (
+                          <div className="flex justify-between items-center text-red-600">
+                            <span>Tiền giảm giá:</span>
+                            <span>-{(calculateOriginalTotal() - calculateTotal()).toLocaleString('vi-VN')} VND</span>
+                          </div>
+                        )}
                         <div className="flex justify-between items-center text-lg font-semibold mt-4 pt-4 border-t border-gray-200">
                           <span className="text-gray-900">Tổng cộng:</span>
-                          <span className="text-blue-600">{totalAmount.toLocaleString()} VND</span>
+                          <span className="text-blue-600">{calculateTotal().toLocaleString('vi-VN')} VND</span>
                         </div>
                       </div>
 

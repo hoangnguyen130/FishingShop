@@ -317,6 +317,26 @@ function OrdersUser() {
     }
   };
 
+  // Tính tổng tiền gốc của đơn hàng
+  const calculateOriginalTotal = (items) => {
+    return items.reduce((sum, item) => sum + (item.originalPrice * item.quantity), 0);
+  };
+
+  // Tính tổng tiền sau giảm giá
+  const calculateDiscountedTotal = (items) => {
+    return items.reduce((sum, item) => {
+      const itemPrice = item.discountPercentage > 0 ? item.discountedPrice : item.originalPrice;
+      return sum + (itemPrice * item.quantity);
+    }, 0);
+  };
+
+  // Tính số tiền được giảm
+  const calculateDiscountAmount = (items) => {
+    const originalTotal = calculateOriginalTotal(items);
+    const discountedTotal = calculateDiscountedTotal(items);
+    return originalTotal - discountedTotal;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 pt-20 pb-12">
@@ -607,15 +627,59 @@ function OrdersUser() {
                                 <div className="flex-1">
                                   <h5 className="font-medium text-gray-900">{item.productName}</h5>
                                   <div className="text-sm text-gray-500">
-                                    {item.price.toLocaleString()} VND x {item.quantity}
+                                    {item.discountPercentage > 0 ? (
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-red-600 font-semibold">
+                                          {(item.discountedPrice * item.quantity).toLocaleString()} VND
+                                        </span>
+                                        <span className="text-sm text-gray-400 line-through">
+                                          {(item.originalPrice * item.quantity).toLocaleString()} VND
+                                        </span>
+                                        <span className="text-sm font-bold text-white bg-red-500 px-2 py-0.5 rounded">
+                                          -{item.discountPercentage}%
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-gray-900 font-semibold">
+                                        {(item.originalPrice * item.quantity).toLocaleString()} VND
+                                      </span>
+                                    )}
                                   </div>
+                                  <p className="text-sm text-gray-500">Số lượng: {item.quantity}</p>
                                 </div>
                                 <div className="font-semibold text-gray-900">
-                                  {(item.price * item.quantity).toLocaleString()} VND
+                                  {item.discountPercentage > 0 
+                                    ? (item.discountedPrice * item.quantity).toLocaleString()
+                                    : (item.originalPrice * item.quantity).toLocaleString()} VND
                                 </div>
                               </div>
                             ))}
                           </div>
+                        </div>
+
+                        {/* Tổng kết đơn hàng */}
+                        <div className="border-t border-gray-200 pt-4">
+                          {order.items.some(item => item.discountPercentage > 0) ? (
+                            <>
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-gray-600">Tạm tính:</span>
+                                <span className="text-gray-900">{calculateOriginalTotal(order.items).toLocaleString()} VND</span>
+                              </div>
+                              <div className="flex justify-between items-center text-red-600">
+                                <span>Tiền giảm giá:</span>
+                                <span>-{calculateDiscountAmount(order.items).toLocaleString()} VND</span>
+                              </div>
+                              <div className="flex justify-between items-center text-lg font-semibold mt-4 pt-4 border-t border-gray-200">
+                                <span className="text-gray-900">Tổng cộng:</span>
+                                <span className="text-blue-600">{calculateDiscountedTotal(order.items).toLocaleString()} VND</span>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex justify-between items-center text-lg font-semibold">
+                              <span className="text-gray-900">Tổng cộng:</span>
+                              <span className="text-blue-600">{calculateOriginalTotal(order.items).toLocaleString()} VND</span>
+                            </div>
+                          )}
                         </div>
 
                         {/* Lịch sử trạng thái */}

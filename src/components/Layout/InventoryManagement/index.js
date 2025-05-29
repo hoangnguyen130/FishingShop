@@ -212,9 +212,12 @@ function InventoryManagement() {
   };
 
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.productName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = !selectedType || product.typeName === selectedType;
-    return matchesSearch && matchesType;
+    const searchTermLower = searchTerm.toLowerCase().trim();
+    const productNameLower = (product.productName || '').toLowerCase();
+    const productType = product.typeName || product.type || '';
+    const typeMatch = !selectedType || productType.toLowerCase() === selectedType.toLowerCase();
+    const searchMatch = !searchTermLower || productNameLower.includes(searchTermLower);
+    return typeMatch && searchMatch;
   });
 
   return (
@@ -333,6 +336,14 @@ function InventoryManagement() {
                                 <div className="text-sm font-medium text-gray-900">
                                   {product.productName}
                                 </div>
+                                {product.discountPercentage > 0 && (
+                                  <div className="mt-1">
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                      <FontAwesomeIcon icon={faPercent} className="mr-1" />
+                                      Giảm {product.discountPercentage}%
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </td>

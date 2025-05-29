@@ -53,6 +53,7 @@ function Search() {
   const handleSearch = (e) => {
     if (e.key === 'Enter' && searchValue.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchValue.trim())}`);
+      console.log(searchValue.trim());
       setShowResult(false);
     }
   };

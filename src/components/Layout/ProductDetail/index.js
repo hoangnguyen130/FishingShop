@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faShoppingCart, faMinus, faPlus, faExclamationCircle, faBox } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faShoppingCart, faMinus, faPlus, faExclamationCircle, faBox, faCartShopping } from '@fortawesome/free-solid-svg-icons';
 
 function ProductDetail() {
   const [product, setProduct] = useState(null);
@@ -21,6 +21,7 @@ function ProductDetail() {
       try {
         const response = await axios.get(`http://localhost:3001/v1/products/get/${id}`);
         setProduct(response.data.product);
+        console.log(response.data.product);
       } catch (err) {
         let errorMessage = 'Lỗi khi lấy chi tiết sản phẩm. Vui lòng thử lại!';
         if (err.response?.data?.message) {
@@ -174,13 +175,16 @@ function ProductDetail() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           <div className="p-6">
-            <button
-              onClick={() => navigate('/')}
-              className="text-blue-600 hover:text-blue-700 mb-6 flex items-center"
-            >
-              <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
-              Quay lại
-            </button>
+            <div className="flex items-center justify-between mb-6">
+              <button
+                onClick={() => navigate('/')}
+                className="text-blue-600 hover:text-blue-700 flex items-center"
+              >
+                <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
+                Quay lại
+              </button>
+              
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Product Image */}
@@ -203,15 +207,36 @@ function ProductDetail() {
 
               {/* Product Info */}
               <div className="flex flex-col">
-                <h1 className="text-3xl font-bold text-gray-900 mb-4">{product.name}</h1>
+                <h1 className="text-3xl font-bold text-gray-900 mb-4">{product.productName}</h1>
                 
-                <div className="text-2xl font-bold text-blue-600 mb-6">
-                  {product.price.toLocaleString()} VND
+                <div className="flex items-center gap-4 mb-4">
+                  {product.discountPercentage > 0 && product.discountedPrice ? (
+                    <>
+                      <span className="text-3xl font-bold text-red-600">
+                        {product.discountedPrice.toLocaleString()} VND
+                      </span>
+                      <span className="text-xl text-gray-500 line-through">
+                        {product.originalPrice.toLocaleString()} VND
+                      </span>
+                      <span className="px-2 py-1 bg-red-100 text-red-600 rounded-full text-sm font-semibold">
+                        -{product.discountPercentage}%
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-3xl font-bold text-gray-900">
+                      {product.originalPrice?.toLocaleString() || product.price?.toLocaleString() || '0'} VND
+                    </span>
+                  )}
                 </div>
 
                 <div className="mb-6">
                   <h2 className="text-lg font-semibold text-gray-900 mb-2">Mô tả sản phẩm</h2>
                   <p className="text-gray-600">{product.description || 'Không có mô tả.'}</p>
+                </div>
+
+                <div className="mb-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-2">Loại sản phẩm</h2>
+                  <p className="text-gray-600">{product.type || 'Chưa phân loại'}</p>
                 </div>
 
                 <div className="mb-6">
@@ -241,7 +266,7 @@ function ProductDetail() {
                       max={product.quantity}
                       value={cartQuantity}
                       onChange={handleQuantityChange}
-                      className="w-20 text-center p-2 border border-gray-300 rounded-lg"
+                      className="w-20 text-center border border-gray-300 rounded-lg py-2"
                     />
                     <button
                       onClick={handleQuantityIncrement}
@@ -255,14 +280,14 @@ function ProductDetail() {
                   </div>
                 </div>
 
-                <div className="mt-auto space-y-4">
+                <div className="flex gap-4 mt-6">
                   <button
                     onClick={handleAddToCart}
                     disabled={product.quantity === 0}
-                    className={`w-full py-3 px-6 rounded-lg transition duration-300 flex items-center justify-center ${
+                    className={`flex-1 py-3 px-4 rounded-lg text-white font-semibold flex items-center justify-center ${
                       product.quantity === 0
                         ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                        : 'bg-blue-600 hover:bg-blue-700'
                     }`}
                   >
                     <FontAwesomeIcon icon={faShoppingCart} className="mr-2" />
@@ -270,8 +295,9 @@ function ProductDetail() {
                   </button>
                   <button
                     onClick={() => navigate('/cart')}
-                    className="w-full bg-gray-100 text-gray-800 py-3 px-6 rounded-lg hover:bg-gray-200 transition duration-300"
+                    className="flex-1 py-3 px-4 rounded-lg text-blue-600 font-semibold flex items-center justify-center border-2 border-blue-600 hover:bg-blue-50"
                   >
+                    <FontAwesomeIcon icon={faCartShopping} className="mr-2" />
                     Xem giỏ hàng
                   </button>
                 </div>
